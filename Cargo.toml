@@ -1,0 +1,12 @@
+[package]
+name = "examp-rs"
+version = "0.1.0"
+authors = ["Janonard <janonard@protonmail.com>"]
+edition = "2018"
+
+[lib]
+crate-type = ["dylib"]
+
+[dependencies]
+lv2_raw = "*"
+libc = "*"
