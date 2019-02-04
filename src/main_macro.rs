@@ -7,18 +7,28 @@ macro_rules! lv2_main {
             bundle_path: *const i8,
             features: *const *const lv2::LV2Feature,
         ) -> lv2::LV2Handle {
-            let instance = Box::new($s::new(descriptor, rate, bundle_path, features));
+            let instance = Box::new($s::instantiate(descriptor, rate, bundle_path, features));
             Box::leak(instance) as *const $s as lv2::LV2Handle
         }
 
         extern "C" fn connect_port(instance: lv2::LV2Handle, port: u32, data: *mut libc::c_void) {
-            let amp = unsafe { (instance as *mut $s).as_mut() }.unwrap();
-            amp.connect_port(port, data as *mut ());
+            let instance = unsafe { (instance as *mut $s).as_mut() }.unwrap();
+            instance.connect_port(port, data as *mut ());
         }
 
-        extern "C" fn run(instance: lv2::LV2Handle, n_samples: u32) {
-            let amp = unsafe { (instance as *mut $s).as_mut() }.unwrap();
-            amp.run(n_samples);
+        extern "C" fn activate(instance: lv2::LV2Handle) {
+            let instance = unsafe { (instance as *mut $s).as_mut() }.unwrap();
+            instance.activate();
+        }
+
+        extern "C" fn run(instance: lv2::LV2Handle, n_sinstanceles: u32) {
+            let instance = unsafe { (instance as *mut $s).as_mut() }.unwrap();
+            instance.run(n_sinstanceles);
+        }
+
+        extern "C" fn deactivate(instance: lv2::LV2Handle) {
+            let instance = unsafe { (instance as *mut $s).as_mut() }.unwrap();
+            instance.deactivate();
         }
 
         extern "C" fn cleanup(instance: lv2::LV2Handle) {
@@ -38,9 +48,9 @@ macro_rules! lv2_main {
                     uri: $u.as_ptr() as *const i8,
                     instantiate: instantiate,
                     connect_port: connect_port,
-                    activate: None,
+                    activate: Some(activate),
                     run: run,
-                    deactivate: None,
+                    deactivate: Some(deactivate),
                     cleanup: cleanup,
                     extension_data: extension_data,
                 });
