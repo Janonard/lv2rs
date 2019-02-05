@@ -47,4 +47,4 @@ impl plugin::Plugin for ExAmp {
     }
 }
 
-lv2_main!(ExAmp, "https://github.com/Janonard/ExAmp");
+lv2_main!(ExAmp, b"https://github.com/Janonard/ExAmp");

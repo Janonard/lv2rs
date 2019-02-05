@@ -1,6 +1,10 @@
 #[macro_export]
 macro_rules! lv2_main {
+
     ($s:ident, $u:expr) => {
+
+        const PLUGIN_URI: &'static [u8] = $u;
+
         extern "C" fn instantiate(
             descriptor: *const lv2::LV2Descriptor,
             rate: f64,
@@ -45,7 +49,7 @@ macro_rules! lv2_main {
         pub extern "C" fn lv2_descriptor(index: u32) -> *const lv2::LV2Descriptor {
             if index == 0 {
                 let descriptor = Box::new(lv2::LV2Descriptor {
-                    uri: $u.as_ptr() as *const i8,
+                    uri: PLUGIN_URI.as_ptr() as *const i8,
                     instantiate: instantiate,
                     connect_port: connect_port,
                     activate: Some(activate),
