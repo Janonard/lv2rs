@@ -3,7 +3,7 @@ macro_rules! lv2_main {
 
     ($s:ident, $u:expr) => {
 
-        const PLUGIN_URI: &'static [u8] = $u;
+        static mut PLUGIN_URI: Option<std::ffi::CString> = None;
 
         extern "C" fn instantiate(
             descriptor: *const lv2::LV2Descriptor,
@@ -48,8 +48,13 @@ macro_rules! lv2_main {
         #[no_mangle]
         pub extern "C" fn lv2_descriptor(index: u32) -> *const lv2::LV2Descriptor {
             if index == 0 {
+                let uri = unsafe {
+                    PLUGIN_URI = Some(std::ffi::CString::new($u).unwrap());
+                    PLUGIN_URI.as_ref().unwrap().as_ptr() as *const i8
+                };
+
                 let descriptor = Box::new(lv2::LV2Descriptor {
-                    uri: PLUGIN_URI.as_ptr() as *const i8,
+                    uri: uri,
                     instantiate: instantiate,
                     connect_port: connect_port,
                     activate: Some(activate),
