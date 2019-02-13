@@ -1,0 +1,9 @@
+[package]
+name = "lv2-urid"
+version = "0.1.0"
+authors = ["Janonard <janonard@protonmail.com>"]
+edition = "2018"
+
+[dependencies]
+lv2_raw = { git = "https://github.com/Janonard/lv2-raw.git" }
+lv2-core = { path = "../lv2-core" }
