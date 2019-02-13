@@ -34,7 +34,7 @@ macro_rules! lv2_main {
             descriptor: *const lv2_core::raw::LV2Descriptor,
             rate: f64,
             bundle_path: *const std::os::raw::c_char,
-            features: *const *const lv2_core::Feature,
+            features: *const *const lv2_raw::core::LV2Feature,
         ) -> lv2_core::raw::LV2Handle {
             use std::os::raw::c_char;
 
