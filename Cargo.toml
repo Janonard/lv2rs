@@ -5,4 +5,4 @@ authors = ["Janonard <janonard@protonmail.com>"]
 edition = "2018"
 
 [dependencies]
-lv2_raw = { path = "../lv2-raw" }
+lv2_raw = { git = "https://github.com/Janonard/lv2-raw.git" }

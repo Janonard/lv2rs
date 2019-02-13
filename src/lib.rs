@@ -2,16 +2,15 @@ pub extern crate lv2_raw;
 
 pub mod ports;
 pub mod uris;
+mod feature;
 
 pub use lv2_raw::core as raw;
 pub use lv2_raw::coreutils as raw_utils;
 
+pub use feature::*;
+
 pub trait Plugin {
-    fn instantiate(
-        rate: f64,
-        bundle_path: &std::ffi::CStr,
-        features: *const *const raw::LV2Feature,
-    ) -> Self;
+    fn instantiate(rate: f64, bundle_path: &std::ffi::CStr, features: FeatureIterator) -> Self;
 
     fn connect_port(&mut self, port: u32, data: *mut ());
 
@@ -35,11 +34,12 @@ macro_rules! lv2_main {
             descriptor: *const lv2_core::raw::LV2Descriptor,
             rate: f64,
             bundle_path: *const std::os::raw::c_char,
-            features: *const *const lv2_core::raw::LV2Feature,
+            features: *const *const lv2_core::Feature,
         ) -> lv2_core::raw::LV2Handle {
             use std::os::raw::c_char;
 
             let bundle_path = unsafe { std::ffi::CStr::from_ptr(bundle_path as *const c_char) };
+            let features = lv2_core::FeatureIterator::new(features);
 
             let instance = Box::new($s::instantiate(rate, bundle_path, features));
 
