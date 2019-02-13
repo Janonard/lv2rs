@@ -10,11 +10,7 @@ struct ExAmp {
 }
 
 impl lv2_core::Plugin for ExAmp {
-    fn instantiate(
-        _rate: f64,
-        _bundle_path: &CStr,
-        _features: *const *const raw::LV2Feature,
-    ) -> Self {
+    fn instantiate(_rate: f64, _bundle_path: &CStr, _features: lv2_core::FeatureIterator) -> Self {
         Self {
             gain: ports::ParameterInputPort::new(),
             input: ports::AudioInputPort::new(),
