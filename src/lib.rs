@@ -1,8 +1,10 @@
-extern crate libc;
-pub extern crate lv2_raw as raw;
+pub extern crate lv2_raw;
 
 pub mod ports;
 pub mod uris;
+
+pub use lv2_raw::core as raw;
+pub use lv2_raw::coreutils as raw_utils;
 
 pub trait Plugin {
     fn instantiate(
@@ -19,7 +21,7 @@ pub trait Plugin {
 
     fn deactivate(&mut self) {}
 
-    fn extension_data(_uri: *const u8) -> *const libc::c_void {
+    fn extension_data(_uri: &std::ffi::CStr) -> *const () {
         std::ptr::null()
     }
 }
@@ -75,8 +77,13 @@ macro_rules! lv2_main {
             }
         }
 
-        extern "C" fn extension_data(uri: *const std::os::raw::c_char) -> *const std::os::raw::c_void {
-            $s::extension_data(uri)
+        extern "C" fn extension_data(
+            uri: *const std::os::raw::c_char,
+        ) -> *const std::os::raw::c_void {
+            let uri = unsafe { std::ffi::CStr::from_ptr(uri as *const std::os::raw::c_char) };
+            let result = $s::extension_data(uri);
+            std::mem::forget(uri);
+            result as *const std::os::raw::c_void
         }
 
         #[no_mangle]
