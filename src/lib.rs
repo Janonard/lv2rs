@@ -1,8 +1,8 @@
 pub extern crate lv2_raw;
 
+mod feature;
 pub mod ports;
 pub mod uris;
-mod feature;
 
 pub use lv2_raw::core as raw;
 pub use lv2_raw::coreutils as raw_utils;

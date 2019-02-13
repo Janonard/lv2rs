@@ -1,25 +1,53 @@
-pub use lv2_raw::core::LV2Feature as Feature;
+use crate::raw::LV2Feature;
+use std::ffi::CStr;
 
+#[derive(Clone)]
+pub struct Feature {
+    feature: &'static LV2Feature,
+}
+
+impl Feature {
+    fn new(feature: &'static LV2Feature) -> Self {
+        Self { feature: feature }
+    }
+
+    pub fn get_uri(&self) -> Option<&'static CStr> {
+        match unsafe { self.feature.uri.as_ref() } {
+            Some(uri) => Some(unsafe { CStr::from_ptr(uri) }),
+            None => None,
+        }
+    }
+
+    pub fn get_data(&self) -> *mut () {
+        self.feature.data as *mut ()
+    }
+}
+
+#[derive(Clone)]
 pub struct FeatureIterator {
-    raw: *const *const crate::raw::LV2Feature,
+    raw: *const *const LV2Feature,
 }
 
 impl FeatureIterator {
-    pub fn new(raw: *const *const crate::raw::LV2Feature) -> Self {
+    pub fn new(raw: *const *const LV2Feature) -> Self {
         Self { raw: raw }
     }
 }
 
 impl std::iter::Iterator for FeatureIterator {
-    type Item = &'static crate::raw::LV2Feature;
+    type Item = Feature;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.raw.is_null() {
             None
         } else {
-            let feature = unsafe { (*self.raw).as_ref() }.unwrap();
-            self.raw = unsafe { self.raw.add(1) };
-            Some(feature)
+            match unsafe { (*self.raw).as_ref() } {
+                Some(feature) => {
+                    self.raw = unsafe { self.raw.add(1) };
+                    Some(Feature::new(feature))
+                }
+                None => None,
+            }
         }
     }
 }
