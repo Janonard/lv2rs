@@ -42,4 +42,4 @@ impl lv2_core::Plugin for ExAmp {
     }
 }
 
-lv2_main!(ExAmp, b"https://github.com/Janonard/ExAmp");
+lv2_main!(ExAmp, b"https://github.com/Janonard/ExAmp\0");
