@@ -1,5 +1,5 @@
 [package]
-name = "lv2-urid"
+name = "lv2rs-urid"
 version = "0.1.0"
 authors = ["Janonard <janonard@protonmail.com>"]
 edition = "2018"
