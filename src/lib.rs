@@ -1,7 +1,7 @@
-extern crate lv2_core;
+extern crate lv2rs_core as core;
 use std::ffi::CStr;
 
-use lv2_core::*;
+use core::*;
 
 struct ExAmp {
     gain: ports::ParameterInputPort,
@@ -9,8 +9,8 @@ struct ExAmp {
     output: ports::AudioOutputPort,
 }
 
-impl lv2_core::Plugin for ExAmp {
-    fn instantiate(_rate: f64, _bundle_path: &CStr, _features: lv2_core::FeatureIterator) -> Self {
+impl Plugin for ExAmp {
+    fn instantiate(_rate: f64, _bundle_path: &CStr, _features: feature::FeatureIterator) -> Self {
         Self {
             gain: ports::ParameterInputPort::new(),
             input: ports::AudioInputPort::new(),
@@ -38,4 +38,4 @@ impl lv2_core::Plugin for ExAmp {
     }
 }
 
-lv2_main!(ExAmp, b"https://github.com/Janonard/ExAmp\0");
+lv2_main!(core, ExAmp, b"https://github.com/Janonard/ExAmp\0");

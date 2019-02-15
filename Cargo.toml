@@ -8,4 +8,4 @@ edition = "2018"
 crate-type = ["dylib"]
 
 [dependencies]
-lv2-core = { path = "../lv2-core" }
+lv2rs-core = { path = "../lv2rs-core" }
