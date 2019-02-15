@@ -11,10 +11,10 @@ impl Feature {
         Self { feature: feature }
     }
 
-    pub fn get_uri(&self) -> Option<&'static CStr> {
+    pub fn get_uri(&self) -> Result<&'static CStr, ()> {
         match unsafe { self.feature.uri.as_ref() } {
-            Some(uri) => Some(unsafe { CStr::from_ptr(uri) }),
-            None => None,
+            Some(uri) => Ok(unsafe { CStr::from_ptr(uri) }),
+            None => Err(()),
         }
     }
 
