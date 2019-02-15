@@ -1,13 +1,13 @@
-use crate::raw::LV2Feature;
+use crate::raw;
 use std::ffi::CStr;
 
 #[derive(Clone)]
 pub struct Feature {
-    feature: &'static LV2Feature,
+    feature: &'static raw::Feature,
 }
 
 impl Feature {
-    fn new(feature: &'static LV2Feature) -> Self {
+    fn new(feature: &'static raw::Feature) -> Self {
         Self { feature: feature }
     }
 
@@ -25,11 +25,11 @@ impl Feature {
 
 #[derive(Clone)]
 pub struct FeatureIterator {
-    raw: *const *const LV2Feature,
+    raw: *const *const raw::Feature,
 }
 
 impl FeatureIterator {
-    pub fn new(raw: *const *const LV2Feature) -> Self {
+    pub fn new(raw: *const *const raw::Feature) -> Self {
         Self { raw: raw }
     }
 }
