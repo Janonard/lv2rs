@@ -1,5 +1,5 @@
-extern crate lv2_core;
 extern crate lv2_raw;
+extern crate lv2rs_core as core;
 pub mod uris;
 
 pub use lv2_raw::urid::LV2Urid as urid;
@@ -9,7 +9,7 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn from_features_iter(iter: lv2_core::FeatureIterator) -> Result<Self, ()> {
+    pub fn from_features_iter(iter: core::FeatureIterator) -> Result<Self, ()> {
         let feature_uri = std::ffi::CStr::from_bytes_with_nul(uris::MAP_URI).unwrap();
 
         for feature in iter {
