@@ -6,3 +6,4 @@ edition = "2018"
 
 [dependencies]
 lv2rs-core = { path = "../lv2rs-core" }
+lv2rs-urid = { path = "../lv2rs-urid" }
