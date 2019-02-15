@@ -1,37 +1,51 @@
-extern crate lv2_raw;
 extern crate lv2rs_core as core;
+
 pub mod uris;
 
-pub use lv2_raw::urid::LV2Urid as urid;
+mod raw;
+
+pub use raw::URID;
 
 pub struct Map {
-    raw: &'static lv2_raw::urid::LV2UridMap,
+    raw: &'static raw::Map,
 }
 
 impl Map {
-    pub fn from_features_iter(iter: core::FeatureIterator) -> Result<Self, ()> {
-        let feature_uri = std::ffi::CStr::from_bytes_with_nul(uris::MAP_URI).unwrap();
-
-        for feature in iter {
-            let uri = match feature.get_uri() {
-                Some(uri) => uri,
-                None => continue,
-            };
-
-            if uri != feature_uri {
-                continue;
+    pub fn try_from_feature(feature: &core::feature::Feature) -> Result<Self, ()> {
+        let feature_uri = feature.get_uri()?;
+        if *(feature_uri.to_bytes()) == *(uris::MAP_URI) {
+            match unsafe { (feature.get_data() as *const raw::Map).as_ref() } {
+                Some(map) => Ok(Self { raw: map }),
+                None => Err(()),
             }
-
-            let map = feature.get_data() as *const lv2_raw::urid::LV2UridMap;
-            match unsafe { map.as_ref() } {
-                Some(map) => return Ok(Self { raw: map }),
-                None => return Err(()),
-            }
+        } else {
+            Err(())
         }
-        Err(())
     }
 
-    pub fn map(&self, uri: &std::ffi::CStr) -> urid {
+    pub fn map(&self, uri: &std::ffi::CStr) -> URID {
         (self.raw.map)(self.raw.handle, uri.as_ptr())
+    }
+}
+
+pub struct Unmap {
+    raw: &'static raw::Unmap,
+}
+
+impl Unmap {
+    pub fn try_from_feature(feature: &core::feature::Feature) -> Result<Self, ()> {
+        let feature_uri = feature.get_uri()?;
+        if *(feature_uri.to_bytes()) == *(uris::UNMAP_URI) {
+            match unsafe { (feature.get_data() as *const raw::Unmap).as_ref() } {
+                Some(unmap) => Ok(Self { raw: unmap }),
+                None => Err(()),
+            }
+        } else {
+            Err(())
+        }
+    }
+
+    pub fn unmap(&self, urid: URID) -> &std::ffi::CStr {
+        unsafe { std::ffi::CStr::from_ptr((self.raw.unmap)(self.raw.handle, urid)) }
     }
 }
