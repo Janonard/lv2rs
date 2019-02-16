@@ -10,7 +10,12 @@ struct ExAmp {
 }
 
 impl Plugin for ExAmp {
-    fn instantiate(_rate: f64, _bundle_path: &CStr, _features: feature::FeatureIterator) -> Self {
+    fn instantiate(
+        _descriptor: &core::raw::Descriptor,
+        _rate: f64,
+        _bundle_path: &CStr,
+        _features: feature::FeatureIterator,
+    ) -> Self {
         Self {
             gain: ports::ParameterInputPort::new(),
             input: ports::AudioInputPort::new(),
@@ -18,7 +23,7 @@ impl Plugin for ExAmp {
         }
     }
 
-    fn connect_port(&mut self, port: u32, data: *mut ()) {
+    unsafe fn connect_port(&mut self, port: u32, data: *mut ()) {
         match port {
             0 => self.gain.connect(data as *const f32),
             1 => self.input.connect(data as *const f32),
