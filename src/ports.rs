@@ -1,87 +1,87 @@
 pub struct AudioInputPort {
-    raw: Option<*const f32>,
+    raw: *const f32,
 }
 
 impl AudioInputPort {
     pub fn new() -> Self {
-        Self { raw: None }
+        Self {
+            raw: std::ptr::null(),
+        }
     }
 
-    pub fn connect(&mut self, raw: *mut ()) {
-        self.raw = Some(raw as *const f32);
+    pub fn connect(&mut self, raw: *const f32) {
+        self.raw = raw
     }
 
-    pub fn iter(&self, n_samples: u32) -> Option<std::slice::Iter<f32>> {
-        match self.raw {
-            Some(raw) => {
-                Some(unsafe { std::slice::from_raw_parts(raw, n_samples as usize) }.iter())
-            }
-            None => None,
+    pub unsafe fn as_slice(&self, n_samples: u32) -> Option<&[f32]> {
+        if self.raw.is_null() {
+            None
+        } else {
+            Some(std::slice::from_raw_parts(self.raw, n_samples as usize))
         }
     }
 }
 
 pub struct AudioOutputPort {
-    raw: Option<*mut f32>,
+    raw: *mut f32,
 }
 
 impl AudioOutputPort {
     pub fn new() -> Self {
-        Self { raw: None }
+        Self {
+            raw: std::ptr::null_mut(),
+        }
     }
 
-    pub fn connect(&mut self, raw: *mut ()) {
-        self.raw = Some(raw as *mut f32);
+    pub fn connect(&mut self, raw: *mut f32) {
+        self.raw = raw;
     }
 
-    pub fn iter_mut(&mut self, n_samples: u32) -> Option<std::slice::IterMut<f32>> {
-        match self.raw {
-            Some(raw) => {
-                Some(unsafe { std::slice::from_raw_parts_mut(raw, n_samples as usize) }.iter_mut())
-            }
-            None => None,
+    pub unsafe fn as_slice(&mut self, n_samples: u32) -> Option<&mut [f32]> {
+        if self.raw.is_null() {
+            None
+        } else {
+            Some(std::slice::from_raw_parts_mut(self.raw, n_samples as usize))
         }
     }
 }
 
 pub struct ParameterInputPort {
-    raw: Option<*const f32>,
+    raw: *const f32,
 }
 
 impl ParameterInputPort {
     pub fn new() -> Self {
-        Self { raw: None }
-    }
-
-    pub fn connect(&mut self, raw: *mut ()) {
-        self.raw = Some(raw as *const f32);
-    }
-
-    pub fn get(&self) -> Option<f32> {
-        match self.raw {
-            Some(raw) => Some(unsafe { *raw }),
-            None => None,
+        Self {
+            raw: std::ptr::null(),
         }
+    }
+
+    pub fn connect(&mut self, raw: *const f32) {
+        self.raw = raw;
+    }
+
+    pub unsafe fn get(&self) -> Option<&f32> {
+        self.raw.as_ref()
     }
 }
 
 pub struct ParameterOutputPort {
-    raw: Option<*mut f32>,
+    raw: *mut f32,
 }
 
 impl ParameterOutputPort {
     pub fn new() -> Self {
-        Self { raw: None }
-    }
-
-    pub fn connect(&mut self, raw: *mut ()) {
-        self.raw = Some(raw as *mut f32);
-    }
-
-    pub fn get_mut(&mut self) -> Option<&mut f32> {
-        match self.raw {
-            Some(raw) => Some(unsafe { raw.as_mut() }.unwrap()),
-            None => None,
+        Self {
+            raw: std::ptr::null_mut(),
         }
+    }
+
+    pub fn connect(&mut self, raw: *mut f32) {
+        self.raw = raw;
+    }
+
+    pub unsafe fn get_mut(&mut self) -> Option<&mut f32> {
+        self.raw.as_mut()
     }
 }
