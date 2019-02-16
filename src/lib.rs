@@ -20,20 +20,20 @@ impl Plugin for ExAmp {
 
     fn connect_port(&mut self, port: u32, data: *mut ()) {
         match port {
-            0 => self.gain.connect(data),
-            1 => self.input.connect(data),
-            2 => self.output.connect(data),
+            0 => self.gain.connect(data as *const f32),
+            1 => self.input.connect(data as *const f32),
+            2 => self.output.connect(data as *mut f32),
             _ => (),
         }
     }
 
     fn run(&mut self, n_samples: u32) {
-        let input = self.input.iter(n_samples).unwrap();
-        let output = self.output.iter_mut(n_samples).unwrap();
-        let gain = self.gain.get().unwrap();
+        let input = unsafe { self.input.as_slice(n_samples) }.unwrap();
+        let output = unsafe { self.output.as_slice(n_samples) }.unwrap();
+        let gain = unsafe { self.gain.get() }.unwrap();
 
-        for (input, output) in input.zip(output) {
-            *output = input * gain;
+        for (i_frame, o_frame) in input.iter().zip(output.iter_mut()) {
+            *o_frame = *gain * i_frame;
         }
     }
 }
