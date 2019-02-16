@@ -1,3 +1,5 @@
+//! LV2 URIs
+
 pub const URI: &[u8] = b"http://lv2plug.in/ns/lv2core\0";
 pub const ALLPASS_PLUGIN_URI: &[u8] = b"http://lv2plug.in/ns/lv2core#AllpassPlugin\0";
 pub const AMPLIFIER_PLUGIN_URI: &[u8] = b"http://lv2plug.in/ns/lv2core#AmplifierPlugin\0";

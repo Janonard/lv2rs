@@ -1,4 +1,7 @@
 //! Raw re-implementation of the C-Header
+//!
+//! The documentation of this module was copied from the C Header fo the LV2 core library and only
+//! slightly modified.
 use std::os::raw::*;
 
 /**
