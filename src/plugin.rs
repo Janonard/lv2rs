@@ -87,11 +87,11 @@ pub trait Plugin {
 
 /// Safe wrapper for a host feature.
 pub struct Feature {
-    feature: *const raw::Feature,
+    feature: *mut raw::Feature,
 }
 
 impl Feature {
-    fn new(feature: *const raw::Feature) -> Self {
+    fn new(feature: *mut raw::Feature) -> Self {
         Self { feature: feature }
     }
 
@@ -114,10 +114,33 @@ impl Feature {
     /// Try to get a pointer to the feature's data.
     ///
     /// None if the internal feature is pointing to null.
-    pub fn get_data(&self) -> Option<*const ()> {
-        match unsafe { self.feature.as_ref() } {
-            Some(feature) => Some(feature.data as *const ()),
+    pub fn get_data(&mut self) -> Option<*mut ()> {
+        match unsafe { self.feature.as_mut() } {
+            Some(feature) => Some(feature.data as *mut ()),
             None => None,
+        }
+    }
+
+    /// Return a casted data pointer if the given URI matches the feature's URI.
+    ///
+    /// No checks are made if the pointer is valid or the returned value is actually of type T.
+    /// Therefore, this function is unsafe.
+    ///
+    /// Also, this function returns None if the URI didn't match or the internal pointers are
+    /// invalid.
+    pub unsafe fn get_data_if_uri_matches<T>(&mut self, uri: &[u8]) -> Option<&mut T> {
+        let feature_uri = match self.get_uri() {
+            Some(uri) => uri,
+            None => return None,
+        };
+        if *(feature_uri.to_bytes()) == *(uri) {
+            let data_ptr = match self.get_data() {
+                Some(data) => data as *mut T,
+                None => return None,
+            };
+            data_ptr.as_mut()
+        } else {
+            None
         }
     }
 }
@@ -137,16 +160,17 @@ impl std::iter::Iterator for FeatureIterator {
     type Item = Feature;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.raw.is_null() {
-            None
+        let feature_ptr = match unsafe { self.raw.as_ref() } {
+            // From a Rust perspective, this is an odd thing: The feature pointers are `const`,
+            // but the data pointer is `mut`. C is a strange language.
+            Some(feature) => (*feature) as *mut raw::Feature,
+            None => return None,
+        };
+        if !feature_ptr.is_null() {
+            self.raw = unsafe { self.raw.add(1) };
+            Some(Feature::new(feature_ptr))
         } else {
-            match unsafe { (*self.raw).as_ref() } {
-                Some(feature) => {
-                    self.raw = unsafe { self.raw.add(1) };
-                    Some(Feature::new(feature))
-                }
-                None => None,
-            }
+            None
         }
     }
 }
