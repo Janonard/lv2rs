@@ -80,7 +80,7 @@ pub struct Descriptor {
        return value: A handle for the new plugin instance, or NULL if instantiation
        has failed.
     */
-    pub instantiate: extern "C" fn(
+    pub instantiate: unsafe extern "C" fn(
         descriptor: *const Descriptor,
         sample_rate: f64,
         bundle_path: *const c_char,
@@ -121,7 +121,7 @@ pub struct Descriptor {
        used to read/write data when run() is called. Data present at the time
        of the connect_port() call MUST NOT be considered meaningful.
     */
-    pub connect_port: extern "C" fn(instance: Handle, port: u32, data_location: *mut c_void),
+    pub connect_port: unsafe extern "C" fn(instance: Handle, port: u32, data_location: *mut c_void),
 
     /**
        Initialise a plugin instance and activate it for use.
@@ -144,7 +144,7 @@ pub struct Descriptor {
        some point in the future. Note that connect_port() may be called before
        or after activate().
     */
-    pub activate: extern "C" fn(instance: Handle),
+    pub activate: unsafe extern "C" fn(instance: Handle),
 
     /**
        Run a plugin instance for a block.
@@ -169,7 +169,7 @@ pub struct Descriptor {
        sample_count: The block size (in samples) for which the plugin
        instance must run.
     */
-    pub run: extern "C" fn(instance: Handle, n_samples: u32),
+    pub run: unsafe extern "C" fn(instance: Handle, n_samples: u32),
 
     /**
        Deactivate a plugin instance (counterpart to activate()).
@@ -189,7 +189,7 @@ pub struct Descriptor {
        called. Note that connect_port() may be called before or after
        deactivate().
     */
-    pub deactivate: extern "C" fn(instance: Handle),
+    pub deactivate: unsafe extern "C" fn(instance: Handle),
 
     /**
        Clean up a plugin instance (counterpart to instantiate()).
@@ -202,7 +202,7 @@ pub struct Descriptor {
        to deactivate() MUST be made before cleanup() is called. Hosts MUST NOT
        call cleanup() unless instantiate() was previously called.
     */
-    pub cleanup: extern "C" fn(instance: Handle),
+    pub cleanup: unsafe extern "C" fn(instance: Handle),
 
     /**
        Return additional plugin data defined by some extenion.
@@ -217,5 +217,5 @@ pub struct Descriptor {
 
        The host is never responsible for freeing the returned value.
     */
-    pub extension_data: extern "C" fn(uri: *const c_char) -> *const c_void,
+    pub extension_data: unsafe extern "C" fn(uri: *const c_char) -> *const c_void,
 }

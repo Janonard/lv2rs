@@ -192,6 +192,10 @@ pub unsafe fn instantiate<P: Plugin>(
     bundle_path: *const c_char,
     features: *const *const raw::Feature,
 ) -> crate::raw::Handle {
+    if descriptor.is_null() | bundle_path.is_null() {
+        return std::ptr::null_mut();
+    }
+
     let descriptor = descriptor.as_ref().unwrap();
     let bundle_path = CStr::from_ptr(bundle_path as *const c_char);
     let features = FeatureIterator::new(features);
@@ -263,4 +267,108 @@ pub unsafe fn extension_data<P: Plugin>(uri: *const c_char) -> *const c_void {
         Some(ext_data) => ext_data as *const ExtensionData as *const c_void,
         None => std::ptr::null(),
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::ffi::CStr;
+
+    use crate::ports::*;
+
+    /// A simple test plugin.
+    ///
+    /// It takes an audio input, multiplies it by the input parameter and writes the result in the
+    /// audio output. Additionally, it calculates the RMS of the applified signal and writes it into
+    /// the output parameter.
+    struct TestPlugin {
+        audio_in: AudioInputPort,
+        audio_out: AudioOutputPort,
+        parameter_in: ParameterInputPort,
+        parameter_out: ParameterOutputPort,
+    }
+
+    impl crate::Plugin for TestPlugin {
+        fn instantiate(
+            descriptor: &crate::Descriptor,
+            rate: f64,
+            bundle_path: &CStr,
+            features: crate::FeatureIterator,
+        ) -> Self {
+            Self {
+                audio_in: AudioInputPort::new(),
+                audio_out: AudioOutputPort::new(),
+                parameter_in: ParameterInputPort::new(),
+                parameter_out: ParameterOutputPort::new(),
+            }
+        }
+
+        unsafe fn connect_port(&mut self, port: u32, data: *mut ()) {
+            match port {
+                0 => self.audio_in.connect(data as *const f32),
+                1 => self.audio_out.connect(data as *mut f32),
+                2 => self.parameter_in.connect(data as *const f32),
+                3 => self.parameter_out.connect(data as *mut f32),
+                _ => (),
+            }
+        }
+
+        fn run(&mut self, n_samples: u32) {
+            let audio_in = unsafe { self.audio_in.as_slice(n_samples) }.unwrap();
+            let audio_out = unsafe { self.audio_out.as_slice(n_samples) }.unwrap();
+            let parameter_in = unsafe { self.parameter_in.get() }.unwrap();
+            let parameter_out = unsafe { self.parameter_out.get_mut() }.unwrap();
+
+            for (sample_in, sample_out) in audio_in.iter().zip(audio_out.iter_mut()) {
+                *sample_out = *parameter_in * sample_in;
+            }
+
+            let sum: f32 = audio_out.iter().map(|sample| sample.powi(2)).sum();
+            let sum = sum;
+            *parameter_out = sum.sqrt();
+        }
+    }
+
+    crate::lv2_main!(crate, TestPlugin, b"http://example.org/TestPlugin\0");
+
+    struct TestHost {
+        handle: crate::raw::Handle,
+        audio_input: [f32; 256],
+        audio_output: [f32; 256],
+        parameter_input: f32,
+        parameter_output: f32,
+    }
+
+    impl TestHost {
+        fn new() -> Self {
+            Self {
+                handle: std::ptr::null_mut(),
+                audio_input: [0.0; 256],
+                audio_output: [0.0; 256],
+                parameter_input: 0.0,
+                parameter_output: 0.0,
+            }
+        }
+    }
+
+    #[test]
+    fn test_instantiate() {
+        let mut host = TestHost::new();
+        let descriptor = unsafe { lv2_descriptor(0) };
+
+        const BUNDLE_PATH: &[u8] = b"/\0";
+        host.handle = unsafe {
+            instantiate(
+                descriptor,
+                44100.0,
+                BUNDLE_PATH.as_ptr() as *const std::os::raw::c_char,
+                std::ptr::null(),
+            )
+        };
+
+        // test if the plugin handle is valid.
+        unsafe { (host.handle as *const TestPlugin).as_ref() }.unwrap();
+
+        unsafe { cleanup(host.handle) };
+    }
+
 }
