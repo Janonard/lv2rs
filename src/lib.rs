@@ -26,7 +26,7 @@ pub mod raw;
 pub mod uris;
 
 pub use plugin::*;
-pub use raw::Descriptor;
+pub use raw::{Descriptor, Feature};
 
 /// Create  lv2 export functions.
 ///
@@ -52,7 +52,7 @@ pub use raw::Descriptor;
 ///             _descriptor: &core::Descriptor,
 ///             _rate: f64,
 ///             _bundle_path: &CStr,
-///             _features: core::FeatureIterator
+///             _features: Vec<&mut core::Feature>
 ///         ) -> Self {
 ///             Self {}
 ///         }
