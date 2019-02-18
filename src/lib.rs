@@ -12,9 +12,17 @@ pub struct Map<'a> {
 
 impl<'a> Map<'a> {
     pub fn try_from_feature(feature: &'a mut core::Feature) -> Option<Self> {
-        match unsafe { feature.get_data_if_uri_matches(uris::MAP_URI) } {
-            Some(map) => Some(Self { raw: map }),
+        let feature_uri = match feature.uri() {
+            Some(uri) => uri,
             None => return None,
+        };
+        if *feature_uri.to_bytes() == *uris::MAP_URI {
+            match unsafe { feature.data() } {
+                Some(map) => Some(Self { raw: map }),
+                None => None,
+            }
+        } else {
+            None
         }
     }
 
@@ -29,9 +37,17 @@ pub struct Unmap<'a> {
 
 impl<'a> Unmap<'a> {
     pub fn try_from_feature(feature: &'a mut core::Feature) -> Option<Self> {
-        match unsafe { feature.get_data_if_uri_matches(uris::MAP_URI) } {
-            Some(unmap) => Some(Self { raw: unmap }),
+        let feature_uri = match feature.uri() {
+            Some(uri) => uri,
             None => return None,
+        };
+        if *feature_uri.to_bytes() == *uris::MAP_URI {
+            match unsafe { feature.data() } {
+                Some(map) => Some(Self { raw: map }),
+                None => None,
+            }
+        } else {
+            None
         }
     }
 
