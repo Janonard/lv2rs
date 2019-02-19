@@ -3,23 +3,6 @@
 //! This crate contains the complete contents of the
 //! [LV2 core library](http://lv2plug.in/ns/lv2core/lv2core.html) with additional constructions
 //! to make the use of LV2 as idiomatic and safe as possible.
-//!
-//! ## Getting started
-//!
-//! From Rust's side of view, creating an LV2 plugin is fairly simple:
-//! * Create a new library crate
-//! * Add the following entry to your `Cargo.toml` in order to build a dynamic library:
-//!
-//!   [lib]
-//!   
-//!   crate-type = ["dylib"]
-//!
-//! * Add lv2rs-core as a dependency both in your `Cargo.toml` as well as in your `lib.rs`
-//! * Create a struct and implement [`Plugin`](trait.Plugin.html) for it.
-//! * Use the [`lv2_main!`](macro.lv2_main.html) macro to export the required symbols.
-//!
-//! That's it! Although, if you really want to get started, you should check out the
-//! [tutorial](http://lv2plug.in/book/) at LV2's website before.
 mod plugin;
 pub mod ports;
 pub mod raw;
