@@ -57,6 +57,51 @@ impl Feature {
    pub unsafe fn data<T>(&mut self) -> Option<&mut T> {
       (self.data as *mut T).as_mut()
    }
+
+   /// Walk through the C Array of feature pointers, get a mut and add it to a vector
+   pub unsafe fn features_from_ptr<'a>(ptr: *const *const Feature) -> Option<Vec<&'a mut Feature>> {
+      if ptr.is_null() {
+         return None;
+      }
+
+      let mut ptr = ptr as *mut *mut Feature;
+      let mut features = Vec::new();
+      loop {
+         let feature: &mut *mut Feature = ptr.as_mut().unwrap();
+         match feature.as_mut() {
+            Some(feature) => features.push(feature),
+            None => break,
+         }
+         ptr = ptr.add(1);
+      }
+      Some(features)
+   }
+}
+
+#[cfg(test)]
+#[test]
+fn test_features_from_ptr() {
+   let feature_0_uri = b"http://example.org/Feature0\0";
+   let mut feature_0_data = 42.0;
+   let feature_0 = Feature {
+      uri: feature_0_uri.as_ptr() as *const c_char,
+      data: &mut feature_0_data as *mut f64 as *mut c_void,
+   };
+
+   let feature_1_uri = b"http://example.org/Feature1\0";
+   let mut feature_1_data = 17.0;
+   let feature_1 = Feature {
+      uri: feature_1_uri.as_ptr() as *const c_char,
+      data: &mut feature_1_data as *mut f64 as *mut c_void,
+   };
+
+   let features: [*const Feature; 3] = [&feature_0, &feature_1, std::ptr::null()];
+   let features_vec = unsafe { Feature::features_from_ptr(features.as_ptr()) }.unwrap();
+   for (left, right) in features.iter().zip(features_vec.iter()) {
+      let left = unsafe { left.as_ref() }.unwrap();
+      assert_eq!(left.uri, right.uri);
+      assert_eq!(left.data, right.data);
+   }
 }
 
 /**

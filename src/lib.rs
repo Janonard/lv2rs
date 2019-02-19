@@ -52,7 +52,7 @@ pub use raw::{Descriptor, Feature};
 ///             _descriptor: &core::Descriptor,
 ///             _rate: f64,
 ///             _bundle_path: &CStr,
-///             _features: Vec<&mut core::Feature>
+///             _features: Option<Vec<&mut core::Feature>>
 ///         ) -> Self {
 ///             Self {}
 ///         }

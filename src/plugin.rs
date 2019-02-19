@@ -24,7 +24,7 @@ pub trait Plugin {
         descriptor: &raw::Descriptor,
         rate: f64,
         bundle_path: &CStr,
-        features: Vec<&mut raw::Feature>,
+        features: Option<Vec<&mut raw::Feature>>,
     ) -> Self;
 
     /// Set internal data pointers.
@@ -92,21 +92,6 @@ pub trait Plugin {
 /// Apart from that, it has absolutely no meaning.
 pub trait ExtensionData {}
 
-/// Walk through the C Array of feature pointers, get a mut and add it to a vector
-unsafe fn features_from_ptr<'a>(ptr: *const *const raw::Feature) -> Vec<&'a mut raw::Feature> {
-    let mut ptr = ptr as *mut *mut raw::Feature;
-    let mut features = Vec::new();
-    while !ptr.is_null() {
-        let feature: &mut *mut raw::Feature = ptr.as_mut().unwrap();
-        match feature.as_mut() {
-            Some(feature) => features.push(feature),
-            None => (),
-        }
-        ptr = ptr.add(1);
-    }
-    features
-}
-
 /// Helper function for the `instantiate` plugin call.
 ///
 /// This function takes the raw parameters provided by the C API and turns them into safe Rust data
@@ -117,13 +102,16 @@ pub unsafe fn instantiate<P: Plugin>(
     bundle_path: *const c_char,
     features: *const *const raw::Feature,
 ) -> crate::raw::Handle {
-    if descriptor.is_null() | bundle_path.is_null() {
+    let descriptor = match descriptor.as_ref() {
+        Some(desc) => desc,
+        None => return std::ptr::null_mut(),
+    };
+    let bundle_path = if bundle_path.is_null() {
         return std::ptr::null_mut();
-    }
-
-    let descriptor = descriptor.as_ref().unwrap();
-    let bundle_path = CStr::from_ptr(bundle_path as *const c_char);
-    let features: Vec<&mut raw::Feature> = features_from_ptr(features);
+    } else {
+        CStr::from_ptr(bundle_path as *const c_char)
+    };
+    let features = raw::Feature::features_from_ptr(features);
 
     let instance = Box::new(P::instantiate(descriptor, rate, bundle_path, features));
 
