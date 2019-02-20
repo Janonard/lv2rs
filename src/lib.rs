@@ -1,7 +1,7 @@
-extern crate lv2rs_core as core;
+extern crate lv2rs;
 use std::ffi::CStr;
 
-use core::*;
+use lv2rs::core::{self, *};
 
 struct ExAmp {
     gain: ports::ParameterInputPort,
@@ -11,10 +11,10 @@ struct ExAmp {
 
 impl Plugin for ExAmp {
     fn instantiate(
-        _descriptor: &core::raw::Descriptor,
+        _descriptor: &raw::Descriptor,
         _rate: f64,
         _bundle_path: &CStr,
-        _features: Option<Vec<&mut core::Feature>>,
+        _features: Option<Vec<&mut Feature>>,
     ) -> Self {
         Self {
             gain: ports::ParameterInputPort::new(),
