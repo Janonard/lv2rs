@@ -14,7 +14,7 @@ impl Plugin for ExAmp {
         _descriptor: &core::raw::Descriptor,
         _rate: f64,
         _bundle_path: &CStr,
-        _features: core::FeatureIterator,
+        _features: Option<Vec<&mut core::Feature>>,
     ) -> Self {
         Self {
             gain: ports::ParameterInputPort::new(),
