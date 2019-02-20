@@ -10,4 +10,4 @@ description = "Rust re-implementation of the LV2 libraries"
 edition = "2018"
 
 [dependencies]
-lv2rs-core = "*"
+lv2rs-core = "0.1.1"
