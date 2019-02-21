@@ -3,13 +3,13 @@
 //! This crate contains the complete contents of the
 //! [LV2 core library](http://lv2plug.in/ns/lv2core/lv2core.html) with additional constructions
 //! to make the use of LV2 as idiomatic and safe as possible.
+mod feature;
 mod plugin;
 pub mod ports;
-pub mod raw;
 pub mod uris;
 
+pub use feature::Feature;
 pub use plugin::*;
-pub use raw::{Descriptor, Feature};
 
 /// Create  lv2 export functions.
 ///
@@ -35,7 +35,7 @@ pub use raw::{Descriptor, Feature};
 ///             _descriptor: &core::Descriptor,
 ///             _rate: f64,
 ///             _bundle_path: &CStr,
-///             _features: Option<Vec<&mut core::Feature>>
+///             _features: Option<&[*mut core::Feature]>
 ///         ) -> Self {
 ///             Self {}
 ///         }
@@ -51,7 +51,7 @@ pub use raw::{Descriptor, Feature};
 macro_rules! lv2_main {
     ($c:ident, $s:ty, $u:expr) => {
         const PLUGIN_URI: &'static [u8] = $u;
-        const PLUGIN_DESCRIPTOR: $c::raw::Descriptor = $c::raw::Descriptor {
+        const PLUGIN_DESCRIPTOR: $c::Descriptor = $c::Descriptor {
             uri: PLUGIN_URI.as_ptr() as *const std::os::raw::c_char,
             instantiate: instantiate,
             connect_port: connect_port,
@@ -63,35 +63,35 @@ macro_rules! lv2_main {
         };
 
         unsafe extern "C" fn instantiate(
-            descriptor: *const $c::raw::Descriptor,
+            descriptor: *const $c::Descriptor,
             rate: f64,
             bundle_path: *const std::os::raw::c_char,
-            features: *const *const $c::raw::Feature,
-        ) -> $c::raw::Handle {
+            features: *const *const $c::Feature,
+        ) -> $c::Handle {
             $c::instantiate::<$s>(descriptor, rate, bundle_path, features)
         }
 
         unsafe extern "C" fn connect_port(
-            instance: $c::raw::Handle,
+            instance: $c::Handle,
             port: u32,
             data: *mut std::os::raw::c_void,
         ) {
             $c::connect_port::<$s>(instance, port, data);
         }
 
-        unsafe extern "C" fn activate(instance: $c::raw::Handle) {
+        unsafe extern "C" fn activate(instance: $c::Handle) {
             $c::activate::<$s>(instance);
         }
 
-        unsafe extern "C" fn run(instance: $c::raw::Handle, n_samples: u32) {
+        unsafe extern "C" fn run(instance: $c::Handle, n_samples: u32) {
             $c::run::<$s>(instance, n_samples);
         }
 
-        unsafe extern "C" fn deactivate(instance: $c::raw::Handle) {
+        unsafe extern "C" fn deactivate(instance: $c::Handle) {
             $c::deactivate::<$s>(instance);
         }
 
-        unsafe extern "C" fn cleanup(instance: $c::raw::Handle) {
+        unsafe extern "C" fn cleanup(instance: $c::Handle) {
             $c::cleanup::<$s>(instance);
         }
 
@@ -102,7 +102,7 @@ macro_rules! lv2_main {
         }
 
         #[no_mangle]
-        pub unsafe extern "C" fn lv2_descriptor(index: u32) -> *const $c::raw::Descriptor {
+        pub unsafe extern "C" fn lv2_descriptor(index: u32) -> *const $c::Descriptor {
             if index == 0 {
                 &PLUGIN_DESCRIPTOR
             } else {

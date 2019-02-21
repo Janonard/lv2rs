@@ -23,7 +23,7 @@ impl core::Plugin for TestPlugin {
         _descriptor: &core::Descriptor,
         _rate: f64,
         _bundle_path: &CStr,
-        _features: Option<Vec<&mut core::Feature>>,
+        _features: Option<&[*mut core::Feature]>,
     ) -> Self {
         Self {
             audio_in: AudioInputPort::new(),
@@ -62,7 +62,7 @@ impl core::Plugin for TestPlugin {
 core::lv2_main!(core, TestPlugin, b"http://example.org/TestPlugin\0");
 
 struct TestHost {
-    handle: core::raw::Handle,
+    handle: core::Handle,
     audio_input: [f32; 256],
     audio_output: [f32; 256],
     parameter_input: f32,
@@ -119,6 +119,7 @@ fn test_plugin() {
             null(),
         )
     };
+    assert_ne!(host.handle, null_mut());
 
     // connect_port.
     unsafe {

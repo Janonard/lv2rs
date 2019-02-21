@@ -29,7 +29,7 @@ impl core::Plugin for MyPlugin {
         _descriptor: &core::Descriptor,
         _rate: f64,
         _bundle_path: &CStr,
-        _features: Option<Vec<&mut core::Feature>>
+        _features: Option<&[*mut core::Feature]>
     ) -> Self {
         Self {}
     }
