@@ -17,15 +17,10 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn try_from_feature(feature: &mut core::Feature) -> Option<&mut Self> {
-        let feature_uri = match feature.uri() {
-            Some(uri) => uri,
-            None => return None,
-        };
-        if *feature_uri.to_bytes() == *uris::MAP_URI {
-            unsafe { feature.data() }
-        } else {
-            None
+    pub fn try_from_features<'a>(features: &'a HashMap<&CStr, *mut ()>) -> Option<&'a mut Self> {
+        match features.get(unsafe { CStr::from_bytes_with_nul_unchecked(uris::MAP_URI) }) {
+            Some(data) => Some(unsafe { (*data as *mut Self).as_mut() }.unwrap()),
+            None => None,
         }
     }
 
@@ -41,15 +36,10 @@ pub struct Unmap {
 }
 
 impl Unmap {
-    pub fn try_from_feature(feature: &mut core::Feature) -> Option<&mut Self> {
-        let feature_uri = match feature.uri() {
-            Some(uri) => uri,
-            None => return None,
-        };
-        if *feature_uri.to_bytes() == *uris::MAP_URI {
-            unsafe { feature.data() }
-        } else {
-            None
+    pub fn try_from_features<'a>(features: &'a HashMap<&CStr, *mut ()>) -> Option<&'a mut Self> {
+        match features.get(unsafe { CStr::from_bytes_with_nul_unchecked(uris::MAP_URI) }) {
+            Some(data) => Some(unsafe { (*data as *mut Self).as_mut() }.unwrap()),
+            None => None,
         }
     }
 
@@ -73,6 +63,18 @@ impl<'a> CachedMap<'a> {
             raw_unmap: raw_unmap,
             map_cache: HashMap::new(),
             unmap_cache: HashMap::new(),
+        }
+    }
+
+    pub fn try_from_features(features: &'a HashMap<&CStr, *mut ()>) -> Option<Self> {
+        let raw_map = Map::try_from_features(features);
+        let raw_unmap = Unmap::try_from_features(features);
+        if raw_map.is_none() | raw_unmap.is_none() {
+            return None;
+        } else {
+            let raw_map = raw_map.unwrap();
+            let raw_unmap = raw_unmap.unwrap();
+            Some(Self::new(raw_map, raw_unmap))
         }
     }
 
