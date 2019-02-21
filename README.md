@@ -44,7 +44,3 @@ core::lv2_main!(core, MyPlugin, b"http://example.org/Dummy\0");
 
 That's it! Although, if you really want to get started with LV2, you should check out the
 [tutorial](http://lv2plug.in/book/) at LV2's website.
-
-## License
-
-Although LV2 itself is published under it's own license, this crate is published under the terms of the LGPL v3; You may copy, modify and redistribute this software.

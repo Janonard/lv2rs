@@ -1,8 +1,8 @@
 [package]
 name = "lv2rs-core"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Janonard <janonard@protonmail.com>"]
-license = "LGPL-3.0"
+license = "ISC"
 readme = "README.md"
 repository = "https://github.com/Janonard/lv2rs-core"
 exclude = [".vscode/*",]
