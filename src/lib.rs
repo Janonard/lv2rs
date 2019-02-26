@@ -26,3 +26,4 @@
 //! every example in the [LV2 Book](http://lv2plug.in/book/) using this library.
 
 pub extern crate lv2rs_core as core;
+pub extern crate lv2rs_urid as urid;
