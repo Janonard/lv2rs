@@ -35,7 +35,9 @@ impl lv2::Plugin for UridTestPlugin {
 
         println!("{:?} is mapped to {}", map_uri, map_urid);
 
-        println!("unmapping is not tested, since most implementations crash!");
+        let map_uri = unmap.unmap(map_urid);
+
+        println!("{} is mapped to {:?}", map_urid, map_uri);
 
         instance
     }
