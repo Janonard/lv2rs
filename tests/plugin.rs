@@ -24,13 +24,13 @@ impl core::Plugin for TestPlugin {
         _rate: f64,
         _bundle_path: &CStr,
         _features: Option<&[*mut core::Feature]>,
-    ) -> Self {
-        Self {
+    ) -> Option<Self> {
+        Some(Self {
             audio_in: AudioInputPort::new(),
             audio_out: AudioOutputPort::new(),
             parameter_in: ParameterInputPort::new(),
             parameter_out: ParameterOutputPort::new(),
-        }
+        })
     }
 
     unsafe fn connect_port(&mut self, port: u32, data: *mut ()) {

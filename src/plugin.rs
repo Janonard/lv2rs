@@ -207,15 +207,18 @@ pub trait Plugin {
    /// Create a new instance of the plugin.
    ///
    /// Here, you should instantiate the plugin and supply it with general information. You can look
-   /// at the plugin descriptor (although you shouldn't), the audio frame rate of the current
-   /// session, the path from which the host has loaded the plugin and an iterator over features
-   /// supported by the host.
+   /// at the plugin descriptor, the audio frame rate of the current session, the path from which
+   /// the host has loaded the plugin and an iterator over features supported by the host. If, for
+   /// one reason or another, you find yourself in a situation where you can't properly create a
+   /// plugin instance, you can return `None`.
    fn instantiate(
       descriptor: &Descriptor,
       rate: f64,
       bundle_path: &CStr,
       features: Option<&[*mut Feature]>,
-   ) -> Self;
+   ) -> Option<Self>
+   where
+      Self: Sized;
 
    /// Set internal data pointers.
    ///
@@ -301,6 +304,7 @@ pub unsafe fn instantiate<P: Plugin>(
    } else {
       CStr::from_ptr(bundle_path as *const c_char)
    };
+
    let features = {
       if features.is_null() {
          None
@@ -327,9 +331,13 @@ pub unsafe fn instantiate<P: Plugin>(
       }
    };
 
-   let instance = Box::new(P::instantiate(descriptor, rate, bundle_path, features));
-
-   Box::leak(instance) as *const P as Handle
+   match P::instantiate(descriptor, rate, bundle_path, features) {
+      Some(instance) => {
+         let instance = Box::new(instance);
+         Box::leak(instance) as *const P as Handle
+      }
+      None => std::ptr::null_mut(),
+   }
 }
 
 /// Helper function for the `connect_port` plugin call.

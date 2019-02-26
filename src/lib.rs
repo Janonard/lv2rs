@@ -36,8 +36,8 @@ pub use plugin::*;
 ///             _rate: f64,
 ///             _bundle_path: &CStr,
 ///             _features: Option<&[*mut core::Feature]>
-///         ) -> Self {
-///             Self {}
+///         ) -> Option<Self> {
+///             Some(Self {})
 ///         }
 ///
 ///         unsafe fn connect_port(&mut self, port: u32, data: *mut ()) {}
