@@ -11,16 +11,16 @@ struct ExAmp {
 
 impl Plugin for ExAmp {
     fn instantiate(
-        _descriptor: &raw::Descriptor,
+        _descriptor: &Descriptor,
         _rate: f64,
         _bundle_path: &CStr,
-        _features: Option<Vec<&mut Feature>>,
-    ) -> Self {
-        Self {
+        _features: Option<&[*mut Feature]>,
+    ) -> Option<Self> {
+        Some(Self {
             gain: ports::ParameterInputPort::new(),
             input: ports::AudioInputPort::new(),
             output: ports::AudioOutputPort::new(),
-        }
+        })
     }
 
     unsafe fn connect_port(&mut self, port: u32, data: *mut ()) {
