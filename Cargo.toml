@@ -1,6 +1,6 @@
 [package]
 name = "lv2rs"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Janonard <janonard@protonmail.com>"]
 license = "ISC"
 readme = "README.md"
@@ -10,4 +10,5 @@ description = "Rust re-implementation of the LV2 libraries"
 edition = "2018"
 
 [dependencies]
-lv2rs-core = "0.1.2"
+lv2rs-core = "0.2.0"
+lv2rs-urid = "0.1.0"
