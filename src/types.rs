@@ -1,8 +1,15 @@
+use crate::uris;
+use std::ffi::CStr;
 use urid::URID;
+
+pub trait Atom {
+    fn get_uri<'a>() -> &'a std::ffi::CStr;
+    fn get_urid(urids: &uris::MappedURIDs) -> URID;
+}
 
 /// The header of an atom:Atom.
 #[repr(C)]
-pub struct Atom {
+pub struct AtomHeader {
     /// Size in bytes, not including type and size.
     pub size: u32,
     /// Type of this atom (mapped URI).
@@ -15,9 +22,19 @@ pub struct Atom {
 #[repr(C)]
 pub struct AtomInt {
     /// Atom header.
-    pub atom: Atom,
+    pub atom: AtomHeader,
     /// Integer value.
     pub body: i32,
+}
+
+impl Atom for AtomInt {
+    fn get_uri<'a>() -> &'a CStr {
+        unsafe { CStr::from_bytes_with_nul_unchecked(uris::INT_TYPE_URI) }
+    }
+
+    fn get_urid(urids: &uris::MappedURIDs) -> URID {
+        urids.int
+    }
 }
 
 /// An atom:Long.
@@ -26,9 +43,19 @@ pub struct AtomInt {
 #[repr(C)]
 pub struct AtomLong {
     /// Atom header.
-    pub atom: Atom,
+    pub atom: AtomHeader,
     /// Integer value.
     pub body: i64,
+}
+
+impl Atom for AtomLong {
+    fn get_uri<'a>() -> &'a CStr {
+        unsafe { CStr::from_bytes_with_nul_unchecked(uris::LONG_TYPE_URI) }
+    }
+
+    fn get_urid(urids: &uris::MappedURIDs) -> URID {
+        urids.long
+    }
 }
 
 /// An atom:Float.
@@ -37,9 +64,19 @@ pub struct AtomLong {
 #[repr(C)]
 pub struct AtomFloat {
     /// Atom header.
-    pub atom: Atom,
+    pub atom: AtomHeader,
     /// Floating point value.
     pub body: f32,
+}
+
+impl Atom for AtomFloat {
+    fn get_uri<'a>() -> &'a CStr {
+        unsafe { CStr::from_bytes_with_nul_unchecked(uris::FLOAT_TYPE_URI) }
+    }
+
+    fn get_urid(urids: &uris::MappedURIDs) -> URID {
+        urids.float
+    }
 }
 
 /// An atom:Double.
@@ -48,9 +85,19 @@ pub struct AtomFloat {
 #[repr(C)]
 pub struct AtomDouble {
     /// Atom header.
-    pub atom: Atom,
+    pub atom: AtomHeader,
     /// Floating point value.
     pub body: f64,
+}
+
+impl Atom for AtomDouble {
+    fn get_uri<'a>() -> &'a CStr {
+        unsafe { CStr::from_bytes_with_nul_unchecked(uris::DOUBLE_TYPE_URI) }
+    }
+
+    fn get_urid(urids: &uris::MappedURIDs) -> URID {
+        urids.double
+    }
 }
 
 /// An atom:Bool.
@@ -64,9 +111,19 @@ pub type AtomBool = AtomInt;
 #[repr(C)]
 pub struct AtomURID {
     /// Atom header.
-    pub atom: Atom,
+    pub atom: AtomHeader,
     /// URID.
     pub body: URID,
+}
+
+impl Atom for AtomURID {
+    fn get_uri<'a>() -> &'a CStr {
+        unsafe { CStr::from_bytes_with_nul_unchecked(uris::URID_TYPE_URI) }
+    }
+
+    fn get_urid(urids: &uris::MappedURIDs) -> URID {
+        urids.urid
+    }
 }
 
 /// An atom:String.
@@ -75,8 +132,18 @@ pub struct AtomURID {
 #[repr(C)]
 pub struct AtomString {
     /// Atom header.
-    pub atom: Atom,
+    pub atom: AtomHeader,
     // Contents (a null-terminated UTF-8 string) follow here.
+}
+
+impl Atom for AtomString {
+    fn get_uri<'a>() -> &'a CStr {
+        unsafe { CStr::from_bytes_with_nul_unchecked(uris::STRING_TYPE_URI) }
+    }
+
+    fn get_urid(urids: &uris::MappedURIDs) -> URID {
+        urids.string
+    }
 }
 
 /// The body of an atom:Literal.
@@ -95,9 +162,19 @@ pub struct AtomLiteralBody {
 #[repr(C)]
 pub struct AtomLiteral {
     /// Atom header.
-    pub atom: Atom,
+    pub atom: AtomHeader,
     /// Body.
     pub body: AtomLiteralBody,
+}
+
+impl Atom for AtomLiteral {
+    fn get_uri<'a>() -> &'a CStr {
+        unsafe { CStr::from_bytes_with_nul_unchecked(uris::LITERAL_TYPE_URI) }
+    }
+
+    fn get_urid(urids: &uris::MappedURIDs) -> URID {
+        urids.literal
+    }
 }
 
 /// An atom:Tuple.
@@ -106,8 +183,18 @@ pub struct AtomLiteral {
 #[repr(C)]
 pub struct AtomTuple {
     /// Atom header.
-    pub atom: Atom,
+    pub atom: AtomHeader,
     // Contents (a series of complete atoms) follow here.
+}
+
+impl Atom for AtomTuple {
+    fn get_uri<'a>() -> &'a CStr {
+        unsafe { CStr::from_bytes_with_nul_unchecked(uris::TUPLE_TYPE_URI) }
+    }
+
+    fn get_urid(urids: &uris::MappedURIDs) -> URID {
+        urids.tuple
+    }
 }
 
 /// The body of an atom:Vector.
@@ -126,9 +213,19 @@ pub struct AtomVectorBody {
 #[repr(C)]
 pub struct AtomVector {
     /// Atom header.
-    pub atom: Atom,
+    pub atom: AtomHeader,
     /// Body.
     pub body: AtomVectorBody,
+}
+
+impl Atom for AtomVector {
+    fn get_uri<'a>() -> &'a CStr {
+        unsafe { CStr::from_bytes_with_nul_unchecked(uris::VECTOR_TYPE_URI) }
+    }
+
+    fn get_urid(urids: &uris::MappedURIDs) -> URID {
+        urids.vector
+    }
 }
 
 /// The body of an atom:Property (e.g. in an atom:Object).
@@ -139,7 +236,7 @@ pub struct AtomPropertyBody {
     /// Context URID (may be, and generally is, 0).
     pub context: URID,
     /// Value atom header.
-    pub value: Atom,
+    pub value: AtomHeader,
     // Value atom body follows here.
 }
 
@@ -149,9 +246,19 @@ pub struct AtomPropertyBody {
 #[repr(C)]
 pub struct AtomProperty {
     /// Atom header.
-    pub atom: Atom,
+    pub atom: AtomHeader,
     /// Body.
     pub body: AtomPropertyBody,
+}
+
+impl Atom for AtomProperty {
+    fn get_uri<'a>() -> &'a CStr {
+        unsafe { CStr::from_bytes_with_nul_unchecked(uris::PROPERTY_TYPE_URI) }
+    }
+
+    fn get_urid(urids: &uris::MappedURIDs) -> URID {
+        urids.property
+    }
 }
 
 /// The body of an atom:Object.
@@ -172,9 +279,19 @@ pub struct AtomObjectBody {
 #[repr(C)]
 pub struct AtomObject {
     /// Atom header.
-    pub atom: Atom,
+    pub atom: AtomHeader,
     /// Body.
     pub body: AtomObjectBody,
+}
+
+impl Atom for AtomObject {
+    fn get_uri<'a>() -> &'a CStr {
+        unsafe { CStr::from_bytes_with_nul_unchecked(uris::OBJECT_TYPE_URI) }
+    }
+
+    fn get_urid(urids: &uris::MappedURIDs) -> URID {
+        urids.object
+    }
 }
 
 /// The header of an atom:Event.
@@ -187,7 +304,7 @@ pub struct AtomEvent {
     /// If given as f64, Time in beats.
     pub frames: i64,
     /// Event body atom header.
-    pub body: Atom,
+    pub body: AtomHeader,
     // Body atom contents follow here.
 }
 
@@ -218,7 +335,17 @@ pub struct AtomSequenceBody {
 #[repr(C)]
 pub struct AtomSequence {
     /// Atom header.
-    pub atom: Atom,
+    pub atom: AtomHeader,
     /// Body.
     pub body: AtomSequenceBody,
+}
+
+impl Atom for AtomSequence {
+    fn get_uri<'a>() -> &'a CStr {
+        unsafe { CStr::from_bytes_with_nul_unchecked(uris::SEQUENCE_TYPE_URI) }
+    }
+
+    fn get_urid(urids: &uris::MappedURIDs) -> URID {
+        urids.sequence
+    }
 }

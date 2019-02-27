@@ -1,3 +1,6 @@
+use std::ffi::CStr;
+use urid::URID;
+
 pub const URI: &[u8] = b"http://lv2plug.in/ns/ext/atom\0";
 
 pub const ATOM_TYPE_URI: &[u8] = b"http://lv2plug.in/ns/ext/atom#Atom\0";
@@ -31,3 +34,78 @@ pub const EVENT_TRANSFER_URI: &[u8] = b"http://lv2plug.in/ns/ext/atom#eventTrans
 pub const FRAME_TIME_URI: &[u8] = b"http://lv2plug.in/ns/ext/atom#frameTime\0";
 pub const SUPPORTS_URI: &[u8] = b"http://lv2plug.in/ns/ext/atom#supports\0";
 pub const TIME_UNIT_URI: &[u8] = b"http://lv2plug.in/ns/ext/atom#timeUnit\0";
+
+#[derive(Clone)]
+pub struct MappedURIDs {
+    pub root: URID,
+    pub atom: URID,
+    pub atom_port: URID,
+    pub blank: URID,
+    pub bool: URID,
+    pub chunk: URID,
+    pub double: URID,
+    pub event: URID,
+    pub float: URID,
+    pub int: URID,
+    pub literal: URID,
+    pub long: URID,
+    pub number: URID,
+    pub object: URID,
+    pub path: URID,
+    pub property: URID,
+    pub resource: URID,
+    pub sequence: URID,
+    pub sound: URID,
+    pub string: URID,
+    pub tuple: URID,
+    pub uri: URID,
+    pub urid: URID,
+    pub vector: URID,
+    pub atom_transfer: URID,
+    pub beat_time: URID,
+    pub buffer: URID,
+    pub child: URID,
+    pub event_transfer: URID,
+    pub frame_time: URID,
+    pub supports: URID,
+    pub time_unit: URID,
+}
+
+impl From<&mut urid::Map> for MappedURIDs {
+    fn from(map: &mut urid::Map) -> Self {
+        Self {
+            root: map.map(CStr::from_bytes_with_nul(URI).unwrap()),
+            atom: map.map(CStr::from_bytes_with_nul(ATOM_TYPE_URI).unwrap()),
+            atom_port: map.map(CStr::from_bytes_with_nul(ATOM_PORT_TYPE_URI).unwrap()),
+            blank: map.map(CStr::from_bytes_with_nul(BLANK_TYPE_URI).unwrap()),
+            bool: map.map(CStr::from_bytes_with_nul(BOOL_TYPE_URI).unwrap()),
+            chunk: map.map(CStr::from_bytes_with_nul(CHUNK_TYPE_URI).unwrap()),
+            double: map.map(CStr::from_bytes_with_nul(DOUBLE_TYPE_URI).unwrap()),
+            event: map.map(CStr::from_bytes_with_nul(EVENT_TYPE_URI).unwrap()),
+            float: map.map(CStr::from_bytes_with_nul(FLOAT_TYPE_URI).unwrap()),
+            int: map.map(CStr::from_bytes_with_nul(INT_TYPE_URI).unwrap()),
+            literal: map.map(CStr::from_bytes_with_nul(LITERAL_TYPE_URI).unwrap()),
+            long: map.map(CStr::from_bytes_with_nul(LONG_TYPE_URI).unwrap()),
+            number: map.map(CStr::from_bytes_with_nul(NUMBER_TYPE_URI).unwrap()),
+            object: map.map(CStr::from_bytes_with_nul(OBJECT_TYPE_URI).unwrap()),
+            path: map.map(CStr::from_bytes_with_nul(PATH_TYPE_URI).unwrap()),
+            property: map.map(CStr::from_bytes_with_nul(PROPERTY_TYPE_URI).unwrap()),
+            resource: map.map(CStr::from_bytes_with_nul(RESOURCE_TYPE_URI).unwrap()),
+            sequence: map.map(CStr::from_bytes_with_nul(SEQUENCE_TYPE_URI).unwrap()),
+            sound: map.map(CStr::from_bytes_with_nul(SOUND_TYPE_URI).unwrap()),
+            string: map.map(CStr::from_bytes_with_nul(STRING_TYPE_URI).unwrap()),
+            tuple: map.map(CStr::from_bytes_with_nul(TUPLE_TYPE_URI).unwrap()),
+            uri: map.map(CStr::from_bytes_with_nul(URI_TYPE_URI).unwrap()),
+            urid: map.map(CStr::from_bytes_with_nul(URID_TYPE_URI).unwrap()),
+            vector: map.map(CStr::from_bytes_with_nul(VECTOR_TYPE_URI).unwrap()),
+            atom_transfer: map.map(CStr::from_bytes_with_nul(ATOM_TRANSFER_URI).unwrap()),
+            beat_time: map.map(CStr::from_bytes_with_nul(BEAT_TIME_URI).unwrap()),
+            buffer: map.map(CStr::from_bytes_with_nul(BUFFER_TYPE_URI).unwrap()),
+            child: map.map(CStr::from_bytes_with_nul(CHILD_TYPE_URI).unwrap()),
+            event_transfer: map.map(CStr::from_bytes_with_nul(EVENT_TRANSFER_URI).unwrap()),
+            frame_time: map.map(CStr::from_bytes_with_nul(FRAME_TIME_URI).unwrap()),
+            supports: map.map(CStr::from_bytes_with_nul(SUPPORTS_URI).unwrap()),
+            time_unit: map.map(CStr::from_bytes_with_nul(TIME_UNIT_URI).unwrap()),
+        }
+    }
+}
