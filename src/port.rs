@@ -1,5 +1,4 @@
-use crate::types::*;
-use crate::uris::MappedURIDs;
+use crate::{uris::MappedURIDs, Atom, AtomHeader};
 
 pub struct AtomInputPort {
     raw: *const AtomHeader,
