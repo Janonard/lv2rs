@@ -93,7 +93,11 @@ impl Map {
     ///
     /// If the host is properly implemented, this should be an injective function: Every URI should
     /// be mapped to a unique URID.
-    pub fn map(&mut self, uri: &CStr) -> URID {
+    pub fn map<'a, S>(&mut self, uri: S) -> URID
+    where
+        &'a CStr: From<S>,
+    {
+        let uri: &CStr = uri.into();
         (self.map)(self.handle, uri.as_ptr())
     }
 }
@@ -172,12 +176,16 @@ impl CachedMap {
     ///
     /// The same rules from [Map.map](struct.Map.html#method.map) apply. Additionally, this function
     /// will cache the mappings and short-cut if a requested mapping is already cached.
-    pub fn map(&mut self, uri: &CString) -> URID {
-        if !self.cache.contains_key(uri) {
+    pub fn map<S>(&mut self, uri: S) -> URID
+    where
+        CString: From<S>,
+    {
+        let uri = CString::from(uri);
+        if !self.cache.contains_key(&uri) {
             let urid = self.raw.map(uri.as_c_str());
             self.cache.insert(uri.clone(), urid);
         }
-        *(self.cache.get(uri).unwrap())
+        *(self.cache.get(&uri).unwrap())
     }
 }
 /// Cached version of [Unmap](struct.Unmap.html)
