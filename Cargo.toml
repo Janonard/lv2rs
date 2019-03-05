@@ -6,4 +6,4 @@ edition = "2018"
 
 [dependencies]
 lv2rs-core = "0.2.0"
-lv2rs-urid = { git = "https://github.com/Janonard/lv2rs-urid.git" }
+lv2rs-urid = "0.1.0"

@@ -13,18 +13,12 @@ pub struct AtomHeader {
 
 #[derive(Clone)]
 #[repr(C)]
-pub struct Atom<A: AtomBody>
-where
-    A: Clone,
-{
+pub struct Atom<A: AtomBody + Clone + ?Sized> {
     pub header: AtomHeader,
     pub body: A,
 }
 
-impl<A: AtomBody> Atom<A>
-where
-    A: Clone,
-{
+impl<A: AtomBody + Clone + ?Sized> Atom<A> {
     pub fn from_body(body: A, urids: &MappedURIDs) -> Self {
         let header = AtomHeader {
             size: size_of_val(&body) as c_int,
@@ -37,13 +31,26 @@ where
     }
 }
 
-impl<'a, A: AtomBody + Clone> From<&'a Atom<A>> for &'a AtomHeader {
+impl<A: AtomBody + Clone + ?Sized> std::ops::Deref for Atom<A> {
+    type Target = A;
+    fn deref(&self) -> &A {
+        &self.body
+    }
+}
+
+impl<A: AtomBody + Clone + ?Sized> std::ops::DerefMut for Atom<A> {
+    fn deref_mut(&mut self) -> &mut A {
+        &mut self.body
+    }
+}
+
+impl<'a, A: AtomBody + Clone + ?Sized> From<&'a Atom<A>> for &'a AtomHeader {
     fn from(atom: &'a Atom<A>) -> &'a AtomHeader {
         unsafe { (atom as *const Atom<A> as *const AtomHeader).as_ref() }.unwrap()
     }
 }
 
-impl<'a, A: AtomBody + Clone> From<&'a mut Atom<A>> for &'a mut AtomHeader {
+impl<'a, A: AtomBody + Clone + ?Sized> From<&'a mut Atom<A>> for &'a mut AtomHeader {
     fn from(atom: &'a mut Atom<A>) -> &'a mut AtomHeader {
         unsafe { (atom as *mut Atom<A> as *mut AtomHeader).as_mut() }.unwrap()
     }
@@ -53,8 +60,4 @@ pub trait AtomBody {
     fn get_uri() -> &'static CStr;
 
     fn get_urid(urids: &MappedURIDs) -> URID;
-
-    type WritingParameter;
-
-    type WritingHandle: Default;
 }
