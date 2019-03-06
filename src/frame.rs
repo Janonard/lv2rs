@@ -1,11 +1,21 @@
-use crate::atom::{Atom, AtomBody, AtomHeader};
-use std::mem::size_of_val;
+use crate::atom::AtomHeader;
+use std::mem::size_of;
 
 pub trait WritingFrame {
-    fn write<'a, A: AtomBody + Clone>(
-        &'a mut self,
-        atom: Atom<A>,
-    ) -> Result<(&'a mut Atom<A>, usize), ()>;
+    fn write_raw<'a>(&'a mut self, data: &[u8], padding: bool)
+        -> Result<(&'a mut [u8], usize), ()>;
+
+    fn write_sized<T: Sized>(&mut self, object: &T, padding: bool) -> Result<(&mut T, usize), ()> {
+        let data: &[u8] =
+            unsafe { std::slice::from_raw_parts(object as *const T as *const u8, size_of::<T>()) };
+        match self.write_raw(data, padding) {
+            Ok((data, written_bytes)) => {
+                let object = unsafe { (data.as_mut_ptr() as *mut T).as_mut() }.unwrap();
+                Ok((object, written_bytes))
+            }
+            Err(_) => Err(()),
+        }
+    }
 }
 
 pub struct RootFrame<'a> {
@@ -23,38 +33,35 @@ impl<'a> RootFrame<'a> {
 }
 
 impl<'a> WritingFrame for RootFrame<'a> {
-    fn write<'b, A: AtomBody + Clone>(
+    fn write_raw<'b>(
         &'b mut self,
-        atom: Atom<A>,
-    ) -> Result<(&'b mut Atom<A>, usize), ()> {
-        // Create a byte slice containing the atom that is about to be written.
-        let origin_atom_space: &[u8] = unsafe {
-            std::slice::from_raw_parts(&atom as *const Atom<A> as *const u8, size_of_val(&atom))
-        };
-
+        data: &[u8],
+        padding: bool,
+    ) -> Result<(&'b mut [u8], usize), ()> {
         // Calculate the new amount of used space, including the atom and padding for 64-bit alignment.
-        let new_used_space: usize = self.used_space + origin_atom_space.len();
-        let padding = (new_used_space) % 8;
-        let written_space = origin_atom_space.len() + padding;
-        let new_used_space: usize = new_used_space + padding;
+        let mut new_used_space: usize = self.used_space + data.len();
+        let mut written_space = data.len();
+        if padding {
+            let padding = (new_used_space) % 8;
+            new_used_space += padding;
+            written_space += padding;
+        }
         if new_used_space > self.data.len() {
             return Err(());
         }
 
         // Chop of the space that's already used and that's still free.
         let free_space = self.data.split_at_mut(self.used_space).1;
-        let target_atom_space = free_space.split_at_mut(origin_atom_space.len()).0;
+        let target_data = free_space.split_at_mut(data.len()).0;
 
         // Copy the data.
-        target_atom_space.copy_from_slice(origin_atom_space);
+        target_data.copy_from_slice(data);
 
         // Safe the new used space.
         self.used_space = new_used_space;
 
         // Construct a reference to the newly written atom.
-        let written_atom =
-            unsafe { (target_atom_space.as_mut_ptr() as *mut Atom<A>).as_mut() }.unwrap();
-        Ok((written_atom, written_space))
+        Ok((target_data, written_space))
     }
 }
 
@@ -64,11 +71,12 @@ pub struct AtomFrame<'a, 'b, F: WritingFrame> {
 }
 
 impl<'a, 'b, F: WritingFrame> WritingFrame for AtomFrame<'a, 'b, F> {
-    fn write<'c, A: AtomBody + Clone>(
+    fn write_raw<'c>(
         &'c mut self,
-        atom: Atom<A>,
-    ) -> Result<(&'c mut Atom<A>, usize), ()> {
-        match self.parent_frame.write(atom) {
+        data: &[u8],
+        padding: bool,
+    ) -> Result<(&'c mut [u8], usize), ()> {
+        match self.parent_frame.write_raw(data, padding) {
             Ok((written_atom, written_space)) => {
                 self.atom.size += written_space as i32;
                 Ok((written_atom, written_space))
