@@ -65,12 +65,14 @@ pub trait AtomBody {
 
     fn get_urid(urids: &MappedURIDs) -> URID;
 
+    /*
     fn write_body<'a, F: WritingFrame>(
         frame: &'a mut F,
         parameter: &Self::ConstructionParameter,
-    ) -> Result<&'a mut Self, ()>;
+    ) -> Result<&'a mut Self, ()>;*/
 }
 
+/*
 #[repr(C)]
 pub struct ArrayAtomBody<H, T> {
     header: H,
@@ -113,3 +115,4 @@ impl<H, T> DerefMut for ArrayAtomBody<H, T> {
         &mut self.body
     }
 }
+*/
