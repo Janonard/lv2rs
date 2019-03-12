@@ -1,11 +1,11 @@
 use crate::atom::AtomBody;
 use crate::ports::AtomOutputPort;
 use crate::uris;
-use crate::writer::RawWriter;
+use crate::writer::Writer;
 use std::ffi::CStr;
 
 pub trait ScalarAtomBody {
-    fn construct_body<'a>(writer: &mut RawWriter<'a>, value: &Self) -> Result<&'a mut Self, ()>
+    fn construct_body<'a, W: Writer<'a>>(writer: &mut W, value: &Self) -> Result<&'a mut Self, ()>
     where
         Self: Sized,
     {

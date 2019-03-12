@@ -3,6 +3,20 @@ use crate::uris::MappedURIDs;
 use std::collections::LinkedList;
 use std::mem::size_of;
 
+pub trait Writer<'a> {
+    fn write_raw(&mut self, data: &[u8], padding: bool) -> Result<(&'a mut [u8], usize), ()>;
+
+    fn write_sized<T: Sized>(
+        &mut self,
+        object: &T,
+        padding: bool,
+    ) -> Result<(&'a mut T, usize), ()>;
+
+    fn push_atom_header<A: AtomBody + ?Sized>(&mut self, urid: &MappedURIDs) -> Result<(), ()>;
+
+    fn pop_atom_header(&mut self);
+}
+
 pub struct RawWriter<'a> {
     headers: LinkedList<&'a mut AtomHeader>,
     free_data: &'a mut [u8],
@@ -15,8 +29,10 @@ impl<'a> RawWriter<'a> {
             free_data: data,
         }
     }
+}
 
-    pub fn write_raw(&mut self, data: &[u8], padding: bool) -> Result<(&'a mut [u8], usize), ()> {
+impl<'a> Writer<'a> for RawWriter<'a> {
+    fn write_raw(&mut self, data: &[u8], padding: bool) -> Result<(&'a mut [u8], usize), ()> {
         let n_payload_bytes = data.len();
         let n_padding_bytes = if padding { n_payload_bytes % 8 } else { 0 };
         if n_payload_bytes + n_padding_bytes > self.free_data.len() {
@@ -53,7 +69,7 @@ impl<'a> RawWriter<'a> {
         Ok((target_data, n_payload_bytes + n_padding_bytes))
     }
 
-    pub fn write_sized<T: Sized>(
+    fn write_sized<T: Sized>(
         &mut self,
         object: &T,
         padding: bool,
@@ -69,7 +85,7 @@ impl<'a> RawWriter<'a> {
         }
     }
 
-    pub fn push_atom_header<A: AtomBody + ?Sized>(&mut self, urid: &MappedURIDs) -> Result<(), ()> {
+    fn push_atom_header<A: AtomBody + ?Sized>(&mut self, urid: &MappedURIDs) -> Result<(), ()> {
         let header = AtomHeader {
             size: 0,
             atom_type: A::get_urid(urid),
@@ -83,7 +99,7 @@ impl<'a> RawWriter<'a> {
         }
     }
 
-    pub fn pop_atom_header(&mut self) {
+    fn pop_atom_header(&mut self) {
         self.headers.pop_back();
     }
 }
