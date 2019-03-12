@@ -1,4 +1,5 @@
 use crate::atom::AtomBody;
+use crate::ports::AtomOutputPort;
 use crate::uris;
 use crate::writer::RawWriter;
 use std::ffi::CStr;
@@ -9,6 +10,21 @@ pub trait ScalarAtomBody {
         Self: Sized,
     {
         Ok(writer.write_sized(value, true)?.0)
+    }
+}
+
+impl<A: AtomBody + Clone + ?Sized> AtomOutputPort<A>
+where
+    A: ScalarAtomBody,
+{
+    pub fn write_atom<'a>(
+        &'a mut self,
+        value: &A,
+        urid: &uris::MappedURIDs,
+    ) -> Result<&'a mut A, ()> {
+        let mut writer = self.get_writer()?;
+        writer.push_atom_header::<A>(urid)?;
+        A::construct_body(&mut writer, value)
     }
 }
 

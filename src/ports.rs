@@ -1,5 +1,4 @@
 use crate::atom::*;
-use crate::uris::MappedURIDs;
 use crate::writer::RawWriter;
 use std::marker::PhantomData;
 use std::ptr::null_mut;
@@ -21,7 +20,7 @@ impl<A: AtomBody + Clone + ?Sized> AtomOutputPort<A> {
         self.atom = atom;
     }
 
-    fn get_writer<'a>(&'a mut self) -> Result<RawWriter<'a>, ()> {
+    pub fn get_writer<'a>(&'a mut self) -> Result<RawWriter<'a>, ()> {
         let data_size: usize = match unsafe { self.atom.as_ref() } {
             Some(header) => header.size as usize,
             None => return Err(()),
@@ -33,16 +32,5 @@ impl<A: AtomBody + Clone + ?Sized> AtomOutputPort<A> {
             )
         };
         Ok(RawWriter::new(data))
-    }
-}
-
-impl<A: AtomBody + Clone + ?Sized> AtomOutputPort<A>
-where
-    A: ScalarAtomBody,
-{
-    pub fn write_atom<'a>(&'a mut self, value: &A, urid: &MappedURIDs) -> Result<&'a mut A, ()> {
-        let mut writer = self.get_writer()?;
-        writer.push_atom_header::<A>(urid)?;
-        A::construct_body(&mut writer, value)
     }
 }
