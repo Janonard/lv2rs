@@ -1,25 +1,24 @@
 use crate::atom::{AtomBody, AtomHeader};
 use crate::uris::MappedURIDs;
 use std::collections::LinkedList;
-use std::marker::PhantomData;
 use std::mem::size_of;
 
-pub struct WritingFrame<'a> {
+pub struct RawWriter<'a> {
     headers: LinkedList<&'a mut AtomHeader>,
     free_data: &'a mut [u8],
 }
 
-impl<'a> WritingFrame<'a> {
+impl<'a> RawWriter<'a> {
     pub fn new(data: &'a mut [u8]) -> Self {
-        Self {
+        RawWriter {
             headers: LinkedList::new(),
             free_data: data,
         }
     }
 
-    pub fn write_raw(&mut self, data: &[u8]) -> Result<(&'a mut [u8], usize), ()> {
+    pub fn write_raw(&mut self, data: &[u8], padding: bool) -> Result<(&'a mut [u8], usize), ()> {
         let n_payload_bytes = data.len();
-        let n_padding_bytes = n_payload_bytes % 8;
+        let n_padding_bytes = if padding { n_payload_bytes % 8 } else { 0 };
         if n_payload_bytes + n_padding_bytes > self.free_data.len() {
             return Err(());
         }
@@ -54,10 +53,14 @@ impl<'a> WritingFrame<'a> {
         Ok((target_data, n_payload_bytes + n_padding_bytes))
     }
 
-    pub fn write_sized<T: Sized>(&mut self, object: &T) -> Result<(&'a mut T, usize), ()> {
+    pub fn write_sized<T: Sized>(
+        &mut self,
+        object: &T,
+        padding: bool,
+    ) -> Result<(&'a mut T, usize), ()> {
         let data: &[u8] =
             unsafe { std::slice::from_raw_parts(object as *const T as *const u8, size_of::<T>()) };
-        match self.write_raw(data) {
+        match self.write_raw(data, padding) {
             Ok((data, n_written_bytes)) => {
                 let object = unsafe { (data.as_mut_ptr() as *mut T).as_mut() }.unwrap();
                 Ok((object, n_written_bytes))
@@ -71,7 +74,7 @@ impl<'a> WritingFrame<'a> {
             size: 0,
             atom_type: A::get_urid(urid),
         };
-        match self.write_sized(&header) {
+        match self.write_sized(&header, true) {
             Ok((header, _)) => {
                 self.headers.push_back(header);
                 Ok(())
