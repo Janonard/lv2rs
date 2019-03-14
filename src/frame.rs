@@ -1,5 +1,6 @@
 use crate::atom::{AtomBody, AtomHeader};
 use crate::uris::MappedURIDs;
+use std::marker::PhantomData;
 use std::mem::size_of;
 
 pub trait CoreWriter<'a> {
@@ -13,10 +14,11 @@ pub trait Writer<'a> {
         padding: bool,
     ) -> Result<(&'a mut T, usize), ()>;
 
-    fn create_atom<'b, A: AtomBody>(
+    fn create_atom<'b, A: AtomBody + ?Sized>(
         &'b mut self,
         urids: &MappedURIDs,
-    ) -> Result<AtomFrame<'b, 'a>, ()>;
+        parameter: &A::InitializationParameter,
+    ) -> Result<AtomFrame<'b, 'a, A>, ()>;
 }
 
 impl<'a, W> Writer<'a> for W
@@ -39,19 +41,23 @@ where
         }
     }
 
-    fn create_atom<'b, A: AtomBody>(
+    fn create_atom<'b, A: AtomBody + ?Sized>(
         &'b mut self,
         urids: &MappedURIDs,
-    ) -> Result<AtomFrame<'b, 'a>, ()> {
+        parameter: &A::InitializationParameter,
+    ) -> Result<AtomFrame<'b, 'a, A>, ()> {
         let header = AtomHeader {
             size: 0,
             atom_type: A::get_urid(urids),
         };
         let header = self.write_sized(&header, true)?.0;
-        let writer = AtomFrame {
+        let mut writer = AtomFrame {
             header: header,
             parent: self,
+            phantom: PhantomData,
         };
+        A::initialize_body(&mut writer, parameter)?;
+
         Ok(writer)
     }
 }
@@ -106,12 +112,13 @@ impl<'a> CoreWriter<'a> for RootFrame<'a> {
     }
 }
 
-pub struct AtomFrame<'a, 'b> {
+pub struct AtomFrame<'a, 'b, A: AtomBody + ?Sized> {
     header: &'b mut AtomHeader,
     parent: &'a mut CoreWriter<'b>,
+    phantom: PhantomData<A>,
 }
 
-impl<'a, 'b> CoreWriter<'b> for AtomFrame<'a, 'b> {
+impl<'a, 'b, A: AtomBody + ?Sized> CoreWriter<'b> for AtomFrame<'a, 'b, A> {
     fn write_raw(&mut self, data: &[u8], padding: bool) -> Result<(&'b mut [u8], usize), ()> {
         let (data, n_bytes_written) = self.parent.write_raw(data, padding)?;
         self.header.size += n_bytes_written as i32;

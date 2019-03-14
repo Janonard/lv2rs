@@ -1,6 +1,6 @@
+use crate::frame::{CoreWriter, Writer};
 use crate::uris::MappedURIDs;
 use std::ffi::CStr;
-use std::mem::size_of_val;
 use urid::URID;
 
 //mod object;
@@ -23,51 +23,45 @@ pub struct AtomHeader {
 }
 
 pub trait AtomBody {
+    type InitializationParameter: ?Sized;
+
     fn get_uri() -> &'static CStr;
 
     fn get_urid(urids: &MappedURIDs) -> URID;
+
+    fn initialize_body<'a, W: Writer<'a> + CoreWriter<'a>>(
+        writer: &mut W,
+        parameter: &Self::InitializationParameter,
+    ) -> Result<(), ()>;
 }
 
 #[derive(Clone)]
 #[repr(C)]
-pub struct Atom<A: AtomBody + Clone + ?Sized> {
+pub struct Atom<A: AtomBody + ?Sized> {
     pub header: AtomHeader,
     pub body: A,
 }
 
-impl<A: AtomBody + Clone + ?Sized> Atom<A> {
-    pub fn from_body(body: A, urids: &MappedURIDs) -> Self {
-        let header = AtomHeader {
-            size: size_of_val(&body) as c_int,
-            atom_type: A::get_urid(urids),
-        };
-        Self {
-            header: header,
-            body: body,
-        }
-    }
-}
-
-impl<A: AtomBody + Clone + ?Sized> std::ops::Deref for Atom<A> {
+impl<A: AtomBody + ?Sized> std::ops::Deref for Atom<A> {
     type Target = A;
     fn deref(&self) -> &A {
         &self.body
     }
 }
 
-impl<A: AtomBody + Clone + ?Sized> std::ops::DerefMut for Atom<A> {
+impl<A: AtomBody + ?Sized> std::ops::DerefMut for Atom<A> {
     fn deref_mut(&mut self) -> &mut A {
         &mut self.body
     }
 }
 
-impl<'a, A: AtomBody + Clone + ?Sized> From<&'a Atom<A>> for &'a AtomHeader {
+impl<'a, A: AtomBody + ?Sized> From<&'a Atom<A>> for &'a AtomHeader {
     fn from(atom: &'a Atom<A>) -> &'a AtomHeader {
         unsafe { (atom as *const Atom<A> as *const AtomHeader).as_ref() }.unwrap()
     }
 }
 
-impl<'a, A: AtomBody + Clone + ?Sized> From<&'a mut Atom<A>> for &'a mut AtomHeader {
+impl<'a, A: AtomBody + ?Sized> From<&'a mut Atom<A>> for &'a mut AtomHeader {
     fn from(atom: &'a mut Atom<A>) -> &'a mut AtomHeader {
         unsafe { (atom as *mut Atom<A> as *mut AtomHeader).as_mut() }.unwrap()
     }
