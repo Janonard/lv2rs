@@ -1,6 +1,6 @@
-use crate::atom::{ArrayAtomBody, AtomBody};
-use crate::frame::WritingFrame;
-use crate::uris;
+use crate::atom::AtomBody;
+use crate::frame::{CoreWriter, Writer};
+use crate::uris::{MappedURIDs, VECTOR_TYPE_URI};
 use std::ffi::CStr;
 use std::mem::size_of;
 use std::os::raw::*;
@@ -12,25 +12,33 @@ pub struct VectorHeader {
     child_type: c_uint,
 }
 
-pub type Vector<T> = ArrayAtomBody<VectorHeader, T>;
+#[repr(C)]
+pub struct Vector<T: AtomBody + Sized> {
+    header: VectorHeader,
+    data: [T],
+}
 
-impl<T: AtomBody + Default> AtomBody for Vector<T> {
-    type ConstructionParameter = ();
+impl<T: AtomBody + Sized> AtomBody for Vector<T> {
+    type InitializationParameter = MappedURIDs;
 
     fn get_uri() -> &'static CStr {
-        unsafe { CStr::from_bytes_with_nul_unchecked(uris::VECTOR_TYPE_URI) }
+        unsafe { CStr::from_bytes_with_nul_unchecked(VECTOR_TYPE_URI) }
     }
 
-    fn get_urid(urids: &uris::MappedURIDs) -> URID {
+    fn get_urid(urids: &MappedURIDs) -> URID {
         urids.vector
     }
 
-    fn write_body<'a, F: WritingFrame>(frame: &'a mut F, _: &()) -> Result<&'a mut Self, ()> {
+    fn initialize_body<'a, W: Writer<'a> + CoreWriter<'a>>(
+        writer: &mut W,
+        urids: &MappedURIDs,
+    ) -> Result<(), ()> {
         let header = VectorHeader {
             child_size: size_of::<T>() as u32,
             // TODO: URID einfügen!
-            child_type: 0,
+            child_type: T::get_urid(urids),
         };
-        Self::__write_body(frame, &header, &[T::default(); 0])
+        writer.write_sized(&header, true)?;
+        Ok(())
     }
 }

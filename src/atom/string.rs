@@ -1,14 +1,13 @@
-use crate::atom::{ArrayAtomBody, AtomBody};
-use crate::frame::WritingFrame;
+use crate::atom::AtomBody;
+use crate::frame::{CoreWriter, Writer};
 use crate::uris;
 use std::ffi::CStr;
+use std::mem::size_of_val;
 use std::os::raw::*;
 use urid::URID;
 
-pub type String = ArrayAtomBody<(), u8>;
-
-impl AtomBody for String {
-    type ConstructionParameter = CStr;
+impl AtomBody for CStr {
+    type InitializationParameter = ();
 
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::STRING_TYPE_URI) }
@@ -18,8 +17,11 @@ impl AtomBody for String {
         urids.string
     }
 
-    fn write_body<'a, F: WritingFrame>(frame: &'a mut F, data: &CStr) -> Result<&'a mut Self, ()> {
-        Self::__write_body(frame, &(), data.to_bytes())
+    fn initialize_body<'a, W: Writer<'a> + CoreWriter<'a>>(
+        writer: &mut W,
+        string: &(),
+    ) -> Result<(), ()> {
+        Ok(())
     }
 }
 
@@ -29,10 +31,14 @@ pub struct LiteralHeader {
     lang: c_uint,
 }
 
-pub type Literal = ArrayAtomBody<LiteralHeader, u8>;
+#[repr(C)]
+pub struct Literal {
+    header: LiteralHeader,
+    string: [u8],
+}
 
 impl AtomBody for Literal {
-    type ConstructionParameter = LiteralHeader;
+    type InitializationParameter = URID;
 
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::LITERAL_TYPE_URI) }
@@ -42,10 +48,15 @@ impl AtomBody for Literal {
         urids.literal
     }
 
-    fn write_body<'a, F: WritingFrame>(
-        frame: &'a mut F,
-        header: &LiteralHeader,
-    ) -> Result<&'a mut Self, ()> {
-        Self::__write_body(frame, header, &[0; 0])
+    fn initialize_body<'a, W: Writer<'a> + CoreWriter<'a>>(
+        writer: &mut W,
+        language: &URID,
+    ) -> Result<(), ()> {
+        let header = LiteralHeader {
+            datatype: 0,
+            lang: *language,
+        };
+        writer.write_sized(&header, true)?;
+        Ok(())
     }
 }

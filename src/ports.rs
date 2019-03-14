@@ -37,7 +37,7 @@ impl<A: AtomBody + ?Sized> AtomOutputPort<A> {
 }
 
 impl<A: AtomBody + Sized> AtomOutputPort<A> {
-    pub fn write_atom(
+    pub fn write_sized_atom(
         &mut self,
         urids: &MappedURIDs,
         parameter: &A::InitializationParameter,
