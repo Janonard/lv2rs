@@ -3,5 +3,5 @@ extern crate lv2rs_urid as urid;
 
 pub mod atom;
 //pub mod ports;
+pub mod frame;
 pub mod uris;
-pub mod writer;

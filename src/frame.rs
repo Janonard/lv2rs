@@ -57,23 +57,32 @@ where
 }
 
 pub struct RootFrame<'a> {
+    n_bytes_written: usize,
     free_data: &'a mut [u8],
 }
 
 impl<'a> RootFrame<'a> {
     pub fn new(data: &'a mut [u8]) -> Self {
-        RootFrame { free_data: data }
+        RootFrame {
+            n_bytes_written: 0,
+            free_data: data,
+        }
     }
 }
 
 impl<'a> CoreWriter<'a> for RootFrame<'a> {
     fn write_raw(&mut self, data: &[u8], padding: bool) -> Result<(&'a mut [u8], usize), ()> {
         let n_payload_bytes = data.len();
-        let n_padding_bytes = if padding { n_payload_bytes % 8 } else { 0 };
-        if n_payload_bytes + n_padding_bytes > self.free_data.len() {
+        let n_padding_bytes = if padding {
+            (self.n_bytes_written + n_payload_bytes) % 8
+        } else {
+            0
+        };
+        let n_written_bytes = n_payload_bytes + n_padding_bytes;
+        if n_written_bytes > self.free_data.len() {
             return Err(());
         }
-        let n_free_bytes = self.free_data.len() - n_payload_bytes - n_padding_bytes;
+        let n_free_bytes = self.free_data.len() - n_written_bytes;
 
         // Creating all required slices.
         let data_ptr = self.free_data.as_mut_ptr();
@@ -82,21 +91,18 @@ impl<'a> CoreWriter<'a> for RootFrame<'a> {
         let padding = unsafe {
             std::slice::from_raw_parts_mut(data_ptr.add(n_payload_bytes), n_padding_bytes)
         };
-        let free_data = unsafe {
-            std::slice::from_raw_parts_mut(
-                data_ptr.add(n_payload_bytes + n_padding_bytes),
-                n_free_bytes,
-            )
-        };
+        let free_data =
+            unsafe { std::slice::from_raw_parts_mut(data_ptr.add(n_written_bytes), n_free_bytes) };
 
         target_data.copy_from_slice(data);
         for byte in padding.iter_mut() {
             *byte = 0;
         }
-        std::mem::replace(&mut self.free_data, free_data);
+        self.n_bytes_written += n_written_bytes;
+        self.free_data = free_data;
 
         // Construct a reference to the newly written atom.
-        Ok((target_data, n_payload_bytes + n_padding_bytes))
+        Ok((target_data, n_written_bytes))
     }
 }
 
