@@ -1,14 +1,15 @@
 use crate::atom::*;
-use crate::writer::RawWriter;
+use crate::frame::{RootFrame, Writer};
+use crate::uris::MappedURIDs;
 use std::marker::PhantomData;
 use std::ptr::null_mut;
 
-pub struct AtomOutputPort<A: AtomBody + Clone + ?Sized> {
+pub struct AtomOutputPort<A: AtomBody + ?Sized> {
     atom: *mut AtomHeader,
     phantom: PhantomData<A>,
 }
 
-impl<A: AtomBody + Clone + ?Sized> AtomOutputPort<A> {
+impl<A: AtomBody + ?Sized> AtomOutputPort<A> {
     pub fn new() -> Self {
         Self {
             atom: null_mut(),
@@ -20,7 +21,7 @@ impl<A: AtomBody + Clone + ?Sized> AtomOutputPort<A> {
         self.atom = atom;
     }
 
-    pub fn get_writer<'a>(&'a mut self) -> Result<RawWriter<'a>, ()> {
+    pub fn create_root_frame<'a>(&'a mut self) -> Result<RootFrame<'a>, ()> {
         let data_size: usize = match unsafe { self.atom.as_ref() } {
             Some(header) => header.size as usize,
             None => return Err(()),
@@ -31,6 +32,18 @@ impl<A: AtomBody + Clone + ?Sized> AtomOutputPort<A> {
                 data_size + std::mem::size_of::<AtomHeader>(),
             )
         };
-        Ok(RawWriter::new(data))
+        Ok(RootFrame::new(data))
+    }
+}
+
+impl<A: AtomBody + Sized> AtomOutputPort<A> {
+    pub fn write_atom(
+        &mut self,
+        urids: &MappedURIDs,
+        parameter: &A::InitializationParameter,
+    ) -> Result<(), ()> {
+        let mut frame = self.create_root_frame()?;
+        frame.create_atom::<A>(urids, parameter)?;
+        Ok(())
     }
 }
