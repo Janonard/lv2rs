@@ -1,37 +1,72 @@
 use crate::atom::{AtomBody, AtomHeader};
 use crate::uris::MappedURIDs;
-use std::collections::LinkedList;
 use std::mem::size_of;
 
-pub trait Writer<'a> {
+pub trait CoreWriter<'a> {
     fn write_raw(&mut self, data: &[u8], padding: bool) -> Result<(&'a mut [u8], usize), ()>;
+}
 
+pub trait Writer<'a> {
     fn write_sized<T: Sized>(
         &mut self,
         object: &T,
         padding: bool,
     ) -> Result<(&'a mut T, usize), ()>;
 
-    fn push_atom_header<A: AtomBody + ?Sized>(&mut self, urid: &MappedURIDs) -> Result<(), ()>;
-
-    fn pop_atom_header(&mut self);
+    fn create_atom<'b, A: AtomBody>(
+        &'b mut self,
+        urids: &MappedURIDs,
+    ) -> Result<AtomFrame<'b, 'a>, ()>;
 }
 
-pub struct RawWriter<'a> {
-    headers: LinkedList<&'a mut AtomHeader>,
-    free_data: &'a mut [u8],
-}
-
-impl<'a> RawWriter<'a> {
-    pub fn new(data: &'a mut [u8]) -> Self {
-        RawWriter {
-            headers: LinkedList::new(),
-            free_data: data,
+impl<'a, W> Writer<'a> for W
+where
+    W: CoreWriter<'a>,
+{
+    fn write_sized<T: Sized>(
+        &mut self,
+        object: &T,
+        padding: bool,
+    ) -> Result<(&'a mut T, usize), ()> {
+        let data: &[u8] =
+            unsafe { std::slice::from_raw_parts(object as *const T as *const u8, size_of::<T>()) };
+        match self.write_raw(data, padding) {
+            Ok((data, n_written_bytes)) => {
+                let object = unsafe { (data.as_mut_ptr() as *mut T).as_mut() }.unwrap();
+                Ok((object, n_written_bytes))
+            }
+            Err(_) => Err(()),
         }
+    }
+
+    fn create_atom<'b, A: AtomBody>(
+        &'b mut self,
+        urids: &MappedURIDs,
+    ) -> Result<AtomFrame<'b, 'a>, ()> {
+        let header = AtomHeader {
+            size: 0,
+            atom_type: A::get_urid(urids),
+        };
+        let header = self.write_sized(&header, true)?.0;
+        let writer = AtomFrame {
+            header: header,
+            parent: self,
+        };
+        Ok(writer)
     }
 }
 
-impl<'a> Writer<'a> for RawWriter<'a> {
+pub struct RootFrame<'a> {
+    free_data: &'a mut [u8],
+}
+
+impl<'a> RootFrame<'a> {
+    pub fn new(data: &'a mut [u8]) -> Self {
+        RootFrame { free_data: data }
+    }
+}
+
+impl<'a> CoreWriter<'a> for RootFrame<'a> {
     fn write_raw(&mut self, data: &[u8], padding: bool) -> Result<(&'a mut [u8], usize), ()> {
         let n_payload_bytes = data.len();
         let n_padding_bytes = if padding { n_payload_bytes % 8 } else { 0 };
@@ -60,46 +95,20 @@ impl<'a> Writer<'a> for RawWriter<'a> {
         }
         std::mem::replace(&mut self.free_data, free_data);
 
-        // updating all headers.
-        for header in self.headers.iter_mut() {
-            header.size += (n_payload_bytes + n_padding_bytes) as i32;
-        }
-
         // Construct a reference to the newly written atom.
         Ok((target_data, n_payload_bytes + n_padding_bytes))
     }
+}
 
-    fn write_sized<T: Sized>(
-        &mut self,
-        object: &T,
-        padding: bool,
-    ) -> Result<(&'a mut T, usize), ()> {
-        let data: &[u8] =
-            unsafe { std::slice::from_raw_parts(object as *const T as *const u8, size_of::<T>()) };
-        match self.write_raw(data, padding) {
-            Ok((data, n_written_bytes)) => {
-                let object = unsafe { (data.as_mut_ptr() as *mut T).as_mut() }.unwrap();
-                Ok((object, n_written_bytes))
-            }
-            Err(_) => Err(()),
-        }
-    }
+pub struct AtomFrame<'a, 'b> {
+    header: &'b mut AtomHeader,
+    parent: &'a mut CoreWriter<'b>,
+}
 
-    fn push_atom_header<A: AtomBody + ?Sized>(&mut self, urid: &MappedURIDs) -> Result<(), ()> {
-        let header = AtomHeader {
-            size: 0,
-            atom_type: A::get_urid(urid),
-        };
-        match self.write_sized(&header, true) {
-            Ok((header, _)) => {
-                self.headers.push_back(header);
-                Ok(())
-            }
-            Err(_) => Err(()),
-        }
-    }
-
-    fn pop_atom_header(&mut self) {
-        self.headers.pop_back();
+impl<'a, 'b> CoreWriter<'b> for AtomFrame<'a, 'b> {
+    fn write_raw(&mut self, data: &[u8], padding: bool) -> Result<(&'b mut [u8], usize), ()> {
+        let (data, n_bytes_written) = self.parent.write_raw(data, padding)?;
+        self.header.size += n_bytes_written as i32;
+        Ok((data, n_bytes_written))
     }
 }
