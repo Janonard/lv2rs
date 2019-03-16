@@ -1,7 +1,8 @@
 use crate::atom::*;
-use crate::frame::{RootFrame, WritingFrame};
+use crate::frame::RootFrame;
 use crate::uris::MappedURIDs;
 use std::marker::PhantomData;
+use std::mem::size_of;
 use std::ptr::null_mut;
 
 pub struct AtomOutputPort<A: AtomBody + ?Sized> {
@@ -21,29 +22,24 @@ impl<A: AtomBody + ?Sized> AtomOutputPort<A> {
         self.atom = atom;
     }
 
-    pub fn create_root_frame<'a>(&'a mut self) -> Result<RootFrame<'a, A>, ()> {
-        let data_size: usize = match unsafe { self.atom.as_ref() } {
-            Some(header) => header.size as usize,
+    pub fn initialize_atom<'a>(
+        &'a mut self,
+        parameter: &A::InitializationParameter,
+        urids: &MappedURIDs,
+    ) -> Result<RootFrame<'a, A>, ()> {
+        let header = match unsafe { self.atom.as_mut() } {
+            Some(header) => header,
             None => return Err(()),
         };
+        let header_size = size_of::<AtomHeader>();
         let data = unsafe {
             std::slice::from_raw_parts_mut(
-                self.atom as *mut u8,
-                data_size + std::mem::size_of::<AtomHeader>(),
+                (self.atom as *mut u8).add(header_size),
+                header.size as usize,
             )
         };
-        Ok(RootFrame::new(data))
-    }
-}
-
-impl<A: AtomBody + Sized> AtomOutputPort<A> {
-    pub fn write_sized_atom(
-        &mut self,
-        urids: &MappedURIDs,
-        parameter: &A::InitializationParameter,
-    ) -> Result<(), ()> {
-        let mut frame = self.create_root_frame()?;
-        unsafe { frame.create_atom::<A>(urids, parameter)? };
-        Ok(())
+        let mut frame = RootFrame::new(header, data, urids);
+        A::initialize_body(&mut frame, parameter)?;
+        Ok(frame)
     }
 }

@@ -1,8 +1,7 @@
 use crate::atom::AtomBody;
-use crate::frame::{CoreWritingFrame, WritingFrame};
+use crate::frame::{WritingFrame, WritingFrameExt};
 use crate::uris;
 use std::ffi::CStr;
-
 pub use std::os::raw::c_int;
 
 pub trait ScalarAtomBody {
@@ -24,10 +23,10 @@ where
         T::get_urid(urids)
     }
 
-    fn initialize_body<'a, W: WritingFrame<'a> + CoreWritingFrame<'a>>(
-        writer: &mut W,
-        parameter: &Self,
-    ) -> Result<(), ()> {
+    fn initialize_body<'a, W>(writer: &mut W, parameter: &Self) -> Result<(), ()>
+    where
+        W: WritingFrameExt<'a, Self> + WritingFrame<'a, Self>,
+    {
         unsafe { writer.write_sized(parameter, true)? };
         Ok(())
     }

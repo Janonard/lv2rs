@@ -71,6 +71,45 @@ pub struct MappedURIDs {
     pub time_unit: URID,
 }
 
+impl Default for MappedURIDs {
+    fn default() -> Self {
+        Self {
+            root: 0,
+            atom: 1,
+            atom_port: 2,
+            blank: 3,
+            bool: 4,
+            chunk: 5,
+            double: 6,
+            event: 7,
+            float: 8,
+            int: 9,
+            literal: 10,
+            long: 11,
+            number: 12,
+            object: 13,
+            path: 14,
+            property: 15,
+            resource: 16,
+            sequence: 17,
+            sound: 18,
+            string: 19,
+            tuple: 20,
+            uri: 21,
+            urid: 22,
+            vector: 23,
+            atom_transfer: 24,
+            beat_time: 25,
+            buffer: 26,
+            child: 27,
+            event_transfer: 28,
+            frame_time: 29,
+            supports: 30,
+            time_unit: 31,
+        }
+    }
+}
+
 impl From<&mut urid::Map> for MappedURIDs {
     fn from(map: &mut urid::Map) -> Self {
         Self {

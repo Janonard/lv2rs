@@ -1,4 +1,4 @@
-use crate::frame::{CoreWritingFrame, WritingFrame};
+use crate::frame::{WritingFrame, WritingFrameExt};
 use crate::uris::MappedURIDs;
 use std::ffi::CStr;
 use urid::URID;
@@ -29,10 +29,12 @@ pub trait AtomBody {
 
     fn get_urid(urids: &MappedURIDs) -> URID;
 
-    fn initialize_body<'a, W: WritingFrame<'a> + CoreWritingFrame<'a>>(
+    fn initialize_body<'a, W>(
         writer: &mut W,
         parameter: &Self::InitializationParameter,
-    ) -> Result<(), ()>;
+    ) -> Result<(), ()>
+    where
+        W: WritingFrameExt<'a, Self> + WritingFrame<'a, Self>;
 }
 
 #[derive(Clone)]
