@@ -3,45 +3,46 @@ use crate::uris::MappedURIDs;
 use std::marker::PhantomData;
 use std::mem::size_of;
 
-pub trait CoreWriter<'a> {
-    fn write_raw(&mut self, data: &[u8], padding: bool) -> Result<(&'a mut [u8], usize), ()>;
+pub trait CoreWritingFrame<'a> {
+    unsafe fn write_raw(&mut self, data: &[u8], padding: bool)
+        -> Result<(&'a mut [u8], usize), ()>;
 }
 
-pub trait Writer<'a> {
-    fn write_sized<T: Sized>(
+pub trait WritingFrame<'a> {
+    unsafe fn write_sized<T: Sized>(
         &mut self,
         object: &T,
         padding: bool,
     ) -> Result<(&'a mut T, usize), ()>;
 
-    fn create_atom<'b, A: AtomBody + ?Sized>(
+    unsafe fn create_atom<'b, A: AtomBody + ?Sized>(
         &'b mut self,
         urids: &MappedURIDs,
         parameter: &A::InitializationParameter,
     ) -> Result<AtomFrame<'b, 'a, A>, ()>;
 }
 
-impl<'a, W> Writer<'a> for W
+impl<'a, W> WritingFrame<'a> for W
 where
-    W: CoreWriter<'a>,
+    W: CoreWritingFrame<'a>,
 {
-    fn write_sized<T: Sized>(
+    unsafe fn write_sized<T: Sized>(
         &mut self,
         object: &T,
         padding: bool,
     ) -> Result<(&'a mut T, usize), ()> {
         let data: &[u8] =
-            unsafe { std::slice::from_raw_parts(object as *const T as *const u8, size_of::<T>()) };
+            std::slice::from_raw_parts(object as *const T as *const u8, size_of::<T>());
         match self.write_raw(data, padding) {
             Ok((data, n_written_bytes)) => {
-                let object = unsafe { (data.as_mut_ptr() as *mut T).as_mut() }.unwrap();
+                let object = (data.as_mut_ptr() as *mut T).as_mut().unwrap();
                 Ok((object, n_written_bytes))
             }
             Err(_) => Err(()),
         }
     }
 
-    fn create_atom<'b, A: AtomBody + ?Sized>(
+    unsafe fn create_atom<'b, A: AtomBody + ?Sized>(
         &'b mut self,
         urids: &MappedURIDs,
         parameter: &A::InitializationParameter,
@@ -62,22 +63,28 @@ where
     }
 }
 
-pub struct RootFrame<'a> {
+pub struct RootFrame<'a, A: AtomBody + ?Sized> {
     n_bytes_written: usize,
     free_data: &'a mut [u8],
+    phantom: PhantomData<A>,
 }
 
-impl<'a> RootFrame<'a> {
+impl<'a, A: AtomBody + ?Sized> RootFrame<'a, A> {
     pub fn new(data: &'a mut [u8]) -> Self {
         RootFrame {
             n_bytes_written: 0,
             free_data: data,
+            phantom: PhantomData,
         }
     }
 }
 
-impl<'a> CoreWriter<'a> for RootFrame<'a> {
-    fn write_raw(&mut self, data: &[u8], padding: bool) -> Result<(&'a mut [u8], usize), ()> {
+impl<'a, A: AtomBody + ?Sized> CoreWritingFrame<'a> for RootFrame<'a, A> {
+    unsafe fn write_raw(
+        &mut self,
+        data: &[u8],
+        padding: bool,
+    ) -> Result<(&'a mut [u8], usize), ()> {
         let n_payload_bytes = data.len();
         let n_padding_bytes = if padding {
             (self.n_bytes_written + n_payload_bytes) % 8
@@ -93,12 +100,10 @@ impl<'a> CoreWriter<'a> for RootFrame<'a> {
         // Creating all required slices.
         let data_ptr = self.free_data.as_mut_ptr();
 
-        let target_data = unsafe { std::slice::from_raw_parts_mut(data_ptr, n_payload_bytes) };
-        let padding = unsafe {
-            std::slice::from_raw_parts_mut(data_ptr.add(n_payload_bytes), n_padding_bytes)
-        };
-        let free_data =
-            unsafe { std::slice::from_raw_parts_mut(data_ptr.add(n_written_bytes), n_free_bytes) };
+        let target_data = std::slice::from_raw_parts_mut(data_ptr, n_payload_bytes);
+        let padding =
+            std::slice::from_raw_parts_mut(data_ptr.add(n_payload_bytes), n_padding_bytes);
+        let free_data = std::slice::from_raw_parts_mut(data_ptr.add(n_written_bytes), n_free_bytes);
 
         target_data.copy_from_slice(data);
         for byte in padding.iter_mut() {
@@ -114,12 +119,16 @@ impl<'a> CoreWriter<'a> for RootFrame<'a> {
 
 pub struct AtomFrame<'a, 'b, A: AtomBody + ?Sized> {
     header: &'b mut AtomHeader,
-    parent: &'a mut CoreWriter<'b>,
+    parent: &'a mut CoreWritingFrame<'b>,
     phantom: PhantomData<A>,
 }
 
-impl<'a, 'b, A: AtomBody + ?Sized> CoreWriter<'b> for AtomFrame<'a, 'b, A> {
-    fn write_raw(&mut self, data: &[u8], padding: bool) -> Result<(&'b mut [u8], usize), ()> {
+impl<'a, 'b, A: AtomBody + ?Sized> CoreWritingFrame<'b> for AtomFrame<'a, 'b, A> {
+    unsafe fn write_raw(
+        &mut self,
+        data: &[u8],
+        padding: bool,
+    ) -> Result<(&'b mut [u8], usize), ()> {
         let (data, n_bytes_written) = self.parent.write_raw(data, padding)?;
         self.header.size += n_bytes_written as i32;
         Ok((data, n_bytes_written))

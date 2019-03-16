@@ -1,5 +1,5 @@
 use crate::atom::*;
-use crate::frame::{RootFrame, Writer};
+use crate::frame::{RootFrame, WritingFrame};
 use crate::uris::MappedURIDs;
 use std::marker::PhantomData;
 use std::ptr::null_mut;
@@ -21,7 +21,7 @@ impl<A: AtomBody + ?Sized> AtomOutputPort<A> {
         self.atom = atom;
     }
 
-    pub fn create_root_frame<'a>(&'a mut self) -> Result<RootFrame<'a>, ()> {
+    pub fn create_root_frame<'a>(&'a mut self) -> Result<RootFrame<'a, A>, ()> {
         let data_size: usize = match unsafe { self.atom.as_ref() } {
             Some(header) => header.size as usize,
             None => return Err(()),
@@ -43,7 +43,7 @@ impl<A: AtomBody + Sized> AtomOutputPort<A> {
         parameter: &A::InitializationParameter,
     ) -> Result<(), ()> {
         let mut frame = self.create_root_frame()?;
-        frame.create_atom::<A>(urids, parameter)?;
+        unsafe { frame.create_atom::<A>(urids, parameter)? };
         Ok(())
     }
 }
