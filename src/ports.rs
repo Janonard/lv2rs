@@ -22,7 +22,7 @@ impl<A: AtomBody + ?Sized> AtomOutputPort<A> {
         self.atom = atom;
     }
 
-    pub fn initialize_atom<'a>(
+    pub fn write_atom<'a>(
         &'a mut self,
         parameter: &A::InitializationParameter,
         urids: &MappedURIDs,
