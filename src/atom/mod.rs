@@ -1,19 +1,13 @@
 use crate::frame::{WritingFrame, WritingFrameExt};
 use crate::uris::MappedURIDs;
 use std::ffi::CStr;
+use std::os::raw::c_int;
 use urid::URID;
 
-//mod object;
-mod scalar;
-//mod sequence;
-//mod string;
-//mod vector;
-
-//pub use object::*;
-pub use scalar::*;
-//pub use sequence::*;
-//pub use string::*;
-//pub use vector::*;
+pub mod literal;
+pub mod scalar;
+pub mod string;
+pub mod vector;
 
 #[derive(Clone)]
 #[repr(C)]
@@ -34,7 +28,7 @@ pub trait AtomBody {
         parameter: &Self::InitializationParameter,
     ) -> Result<(), ()>
     where
-        W: WritingFrameExt<'a, Self> + WritingFrame<'a, Self>;
+        W: WritingFrame<'a> + WritingFrameExt<'a, Self>;
 }
 
 #[derive(Clone)]

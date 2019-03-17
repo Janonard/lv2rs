@@ -10,4 +10,9 @@ pub mod prelude {
     pub use crate::atom::{Atom, AtomBody, AtomHeader};
     pub use crate::frame::{WritingFrame, WritingFrameExt};
     pub use crate::ports::AtomOutputPort;
+
+    // Writing frame extensions
+    pub use crate::atom::literal::LiteralWritingFrame;
+    pub use crate::atom::string::AtomStringWritingFrame;
+    pub use crate::atom::vector::VectorWritingFrame;
 }

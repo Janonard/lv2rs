@@ -25,7 +25,7 @@ where
 
     fn initialize_body<'a, W>(writer: &mut W, parameter: &Self) -> Result<(), ()>
     where
-        W: WritingFrameExt<'a, Self> + WritingFrame<'a, Self>,
+        W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
     {
         unsafe { writer.write_sized(parameter, true)? };
         Ok(())

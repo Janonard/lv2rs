@@ -3,7 +3,7 @@ use crate::uris::MappedURIDs;
 use std::marker::PhantomData;
 use std::mem::size_of;
 
-pub trait WritingFrame<'a, A: AtomBody + ?Sized> {
+pub trait WritingFrame<'a> {
     /// Try to write out a slice of bytes into the atom space.
     ///
     /// The data will be written directly after the previously written data. If `padding` is `true`,
@@ -21,17 +21,9 @@ pub trait WritingFrame<'a, A: AtomBody + ?Sized> {
     fn get_header(&self) -> &AtomHeader;
 
     fn get_header_mut(&mut self) -> &mut AtomHeader;
-
-    unsafe fn get_atom(&self) -> &Atom<A>
-    where
-        Atom<A>: Sized;
-
-    unsafe fn get_atom_mut(&mut self) -> &mut Atom<A>
-    where
-        Atom<A>: Sized;
 }
 
-pub trait WritingFrameExt<'a, A: AtomBody + ?Sized> {
+pub trait WritingFrameExt<'a, A: AtomBody + ?Sized>: WritingFrame<'a> + Sized {
     /// Try to write a sized object into the atom space.
     ///
     /// The data will be written directly after the previously written data. If `padding` is `true`,
@@ -43,29 +35,6 @@ pub trait WritingFrameExt<'a, A: AtomBody + ?Sized> {
     /// of insufficient atom space, this function will return an error.
     ///
     /// Also, this function is unsafe since one can mess up atom structures.
-    unsafe fn write_sized<T: Sized>(
-        &mut self,
-        object: &T,
-        padding: bool,
-    ) -> Result<(&'a mut T, usize), ()>;
-
-    /// Create a new atom header and return a nested writing frame for it.
-    ///
-    /// This function can be used for container atoms. Please note that this function only writes
-    /// the atom header and does not initialize the atom body.
-    ///
-    /// Also, this function is unsafe since one can mess up atom structures.
-    unsafe fn create_atom_frame<'b, C: AtomBody + ?Sized>(
-        &'b mut self,
-        urids: &MappedURIDs,
-    ) -> Result<NestedFrame<'b, 'a, A, C>, ()>;
-}
-
-impl<'a, W, A> WritingFrameExt<'a, A> for W
-where
-    W: WritingFrame<'a, A>,
-    A: AtomBody + ?Sized,
-{
     unsafe fn write_sized<T: Sized>(
         &mut self,
         object: &T,
@@ -82,10 +51,16 @@ where
         }
     }
 
+    /// Create a new atom header and return a nested writing frame for it.
+    ///
+    /// This function can be used for container atoms. Please note that this function only writes
+    /// the atom header and does not initialize the atom body.
+    ///
+    /// Also, this function is unsafe since one can mess up atom structures.
     unsafe fn create_atom_frame<'b, C: AtomBody + ?Sized>(
         &'b mut self,
         urids: &MappedURIDs,
-    ) -> Result<NestedFrame<'b, 'a, A, C>, ()> {
+    ) -> Result<NestedFrame<'b, 'a, C>, ()> {
         let header = AtomHeader {
             size: 0,
             atom_type: A::get_urid(urids),
@@ -99,6 +74,24 @@ where
 
         Ok(writer)
     }
+
+    unsafe fn get_atom(&self) -> &Atom<A>
+    where
+        Atom<A>: Sized,
+    {
+        (self.get_header() as *const AtomHeader as *const Atom<A>)
+            .as_ref()
+            .unwrap()
+    }
+
+    unsafe fn get_atom_mut(&mut self) -> &mut Atom<A>
+    where
+        Atom<A>: Sized,
+    {
+        (self.get_header_mut() as *mut AtomHeader as *mut Atom<A>)
+            .as_mut()
+            .unwrap()
+    }
 }
 
 pub struct RootFrame<'a, A: AtomBody + ?Sized> {
@@ -106,6 +99,15 @@ pub struct RootFrame<'a, A: AtomBody + ?Sized> {
     n_bytes_written: usize,
     free_data: &'a mut [u8],
     phantom: PhantomData<A>,
+}
+
+impl<'a, A> Drop for RootFrame<'a, A>
+where
+    A: AtomBody + ?Sized,
+{
+    fn drop(&mut self) {
+        unsafe { self.write_sized(&(), true) }.unwrap();
+    }
 }
 
 impl<'a, A: AtomBody + ?Sized> RootFrame<'a, A> {
@@ -121,7 +123,7 @@ impl<'a, A: AtomBody + ?Sized> RootFrame<'a, A> {
     }
 }
 
-impl<'a, A: AtomBody + ?Sized> WritingFrame<'a, A> for RootFrame<'a, A> {
+impl<'a, A: AtomBody + ?Sized> WritingFrame<'a> for RootFrame<'a, A> {
     unsafe fn write_raw(
         &mut self,
         data: &[u8],
@@ -166,39 +168,30 @@ impl<'a, A: AtomBody + ?Sized> WritingFrame<'a, A> for RootFrame<'a, A> {
     fn get_header_mut(&mut self) -> &mut AtomHeader {
         self.header
     }
-
-    unsafe fn get_atom(&self) -> &Atom<A>
-    where
-        Atom<A>: Sized,
-    {
-        (self.header as *const AtomHeader as *const Atom<A>)
-            .as_ref()
-            .unwrap()
-    }
-
-    unsafe fn get_atom_mut(&mut self) -> &mut Atom<A>
-    where
-        Atom<A>: Sized,
-    {
-        (self.header as *mut AtomHeader as *mut Atom<A>)
-            .as_mut()
-            .unwrap()
-    }
 }
 
-pub struct NestedFrame<'a, 'b, P, A>
+impl<'a, A: AtomBody + ?Sized> WritingFrameExt<'a, A> for RootFrame<'a, A> {}
+
+pub struct NestedFrame<'a, 'b, A>
 where
-    P: AtomBody + ?Sized,
     A: AtomBody + ?Sized,
 {
     header: &'b mut AtomHeader,
-    parent: &'a mut WritingFrame<'b, P>,
+    parent: &'a mut WritingFrame<'b>,
     phantom: PhantomData<A>,
 }
 
-impl<'a, 'b, P, A> WritingFrame<'b, A> for NestedFrame<'a, 'b, P, A>
+impl<'a, 'b, A> Drop for NestedFrame<'a, 'b, A>
 where
-    P: AtomBody + ?Sized,
+    A: AtomBody + ?Sized,
+{
+    fn drop(&mut self) {
+        unsafe { self.write_sized(&(), true) }.unwrap();
+    }
+}
+
+impl<'a, 'b, A> WritingFrame<'b> for NestedFrame<'a, 'b, A>
+where
     A: AtomBody + ?Sized,
 {
     unsafe fn write_raw(
@@ -218,22 +211,6 @@ where
     fn get_header_mut(&mut self) -> &mut AtomHeader {
         self.header
     }
-
-    unsafe fn get_atom(&self) -> &Atom<A>
-    where
-        Atom<A>: Sized,
-    {
-        (self.header as *const AtomHeader as *const Atom<A>)
-            .as_ref()
-            .unwrap()
-    }
-
-    unsafe fn get_atom_mut(&mut self) -> &mut Atom<A>
-    where
-        Atom<A>: Sized,
-    {
-        (self.header as *mut AtomHeader as *mut Atom<A>)
-            .as_mut()
-            .unwrap()
-    }
 }
+
+impl<'a, 'b, A: AtomBody + ?Sized> WritingFrameExt<'b, A> for NestedFrame<'a, 'b, A> {}

@@ -1,13 +1,14 @@
 use crate::atom::AtomBody;
-use crate::frame::{CoreWriter, Writer};
+use crate::frame::{WritingFrame, WritingFrameExt};
 use crate::uris;
 use std::ffi::CStr;
-use std::mem::size_of_val;
 use std::os::raw::*;
 use urid::URID;
 
-impl AtomBody for CStr {
-    type InitializationParameter = ();
+pub type AtomString = [c_char];
+
+impl AtomBody for AtomString {
+    type InitializationParameter = CStr;
 
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::STRING_TYPE_URI) }
@@ -17,46 +18,23 @@ impl AtomBody for CStr {
         urids.string
     }
 
-    fn initialize_body<'a, W: Writer<'a> + CoreWriter<'a>>(
-        writer: &mut W,
-        string: &(),
-    ) -> Result<(), ()> {
+    fn initialize_body<'a, W>(writer: &mut W, string: &CStr) -> Result<(), ()>
+    where
+        W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
+    {
+        unsafe { writer.write_raw(string.to_bytes(), false) }?;
         Ok(())
     }
 }
 
-#[repr(C)]
-pub struct LiteralHeader {
-    datatype: c_uint,
-    lang: c_uint,
-}
-
-#[repr(C)]
-pub struct Literal {
-    header: LiteralHeader,
-    string: [u8],
-}
-
-impl AtomBody for Literal {
-    type InitializationParameter = URID;
-
-    fn get_uri() -> &'static CStr {
-        unsafe { CStr::from_bytes_with_nul_unchecked(uris::LITERAL_TYPE_URI) }
-    }
-
-    fn get_urid(urids: &uris::MappedURIDs) -> URID {
-        urids.literal
-    }
-
-    fn initialize_body<'a, W: Writer<'a> + CoreWriter<'a>>(
-        writer: &mut W,
-        language: &URID,
-    ) -> Result<(), ()> {
-        let header = LiteralHeader {
-            datatype: 0,
-            lang: *language,
-        };
-        writer.write_sized(&header, true)?;
+pub trait AtomStringWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, AtomString> {
+    fn append(&mut self, string: &CStr) -> Result<(), ()> {
+        unsafe { self.write_raw(string.to_bytes(), false) }?;
         Ok(())
     }
+}
+
+impl<'a, W> AtomStringWritingFrame<'a> for W where
+    W: WritingFrame<'a> + WritingFrameExt<'a, AtomString>
+{
 }
