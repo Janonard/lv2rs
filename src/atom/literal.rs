@@ -41,10 +41,39 @@ impl AtomBody for Literal {
     }
 }
 
+pub enum LiteralWritingError {
+    InsufficientSpace,
+    NotFirstCall,
+}
+
 pub trait LiteralWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, Literal> {
-    fn append(&mut self, string: &str) -> Result<(), ()> {
-        unsafe { self.write_raw(string.as_bytes(), false) }?;
-        Ok(())
+    fn write_string(&mut self, string: &str) -> Result<(), LiteralWritingError> {
+        if self.get_header().size as usize > std::mem::size_of::<LiteralHeader>() {
+            return Err(LiteralWritingError::NotFirstCall);
+        }
+
+        let bytes = string.as_bytes();
+        match unsafe { self.write_raw(bytes, false) } {
+            Ok(_) => (),
+            Err(_) => return Err(LiteralWritingError::InsufficientSpace),
+        }
+
+        let termination_successfull = match bytes.last() {
+            Some(byte) => {
+                if *byte != 0 {
+                    unsafe { self.write_sized(&0u8, true) }.is_ok()
+                } else {
+                    unsafe { self.write_sized(&(), true) }.is_ok()
+                }
+            }
+            None => unsafe { self.write_sized(&0u8, true) }.is_ok(),
+        };
+
+        if termination_successfull {
+            Ok(())
+        } else {
+            Err(LiteralWritingError::InsufficientSpace)
+        }
     }
 }
 

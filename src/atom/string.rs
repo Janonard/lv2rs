@@ -22,19 +22,20 @@ impl AtomBody for AtomString {
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
     {
-        unsafe { writer.write_raw(string.to_bytes(), false) }?;
+        let bytes = string.to_bytes();
+        unsafe { writer.write_raw(bytes, false) }?;
+
+        // Write the string terminator, if not included in the string.
+        match bytes.last() {
+            Some(byte) => {
+                if *byte != 0 {
+                    unsafe { writer.write_sized(&0u8, true) }?;
+                }
+            }
+            None => {
+                unsafe { writer.write_sized(&0u8, true) }?;
+            }
+        }
         Ok(())
     }
-}
-
-pub trait AtomStringWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, AtomString> {
-    fn append(&mut self, string: &CStr) -> Result<(), ()> {
-        unsafe { self.write_raw(string.to_bytes(), false) }?;
-        Ok(())
-    }
-}
-
-impl<'a, W> AtomStringWritingFrame<'a> for W where
-    W: WritingFrame<'a> + WritingFrameExt<'a, AtomString>
-{
 }
