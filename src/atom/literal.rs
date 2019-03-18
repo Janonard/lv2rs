@@ -67,6 +67,7 @@ impl Atom<Literal> {
     }
 }
 
+#[derive(Debug)]
 pub enum LiteralWritingError {
     InsufficientSpace,
     NotFirstCall,

@@ -155,17 +155,21 @@ fn test_tuple() {
     // Writing.
     {
         let mut frame = out_port.write_atom(&(), &urids).unwrap();
+        assert_eq!(0, frame.get_header().size % 8);
         frame.push_atom::<i32>(&42, &urids).unwrap();
+        assert_eq!(0, frame.get_header().size % 8);
         frame
             .push_atom::<Vector<i32>>(&urids, &urids)
             .unwrap()
             .append(&[0, 2, 4])
             .unwrap();
-        assert!(frame
+        assert_eq!(0, frame.get_header().size % 8);
+        frame
             .push_atom::<Literal>(&0, &urids)
             .unwrap()
             .write_string("Hello World!")
-            .is_ok());
+            .unwrap();
+        assert_eq!(0, frame.get_header().size % 8);
     }
 
     // Reading.
@@ -176,7 +180,7 @@ fn test_tuple() {
     // Vector: AtomHeader, VectorHeader, slice, pad.
     assumed_size += 8 + 8 + 3 * 4 + 4;
     // Literal: AtomHeader, LiteralHeader, string, pad.
-    assumed_size += 8 + 8 + 13 + 5;
+    assumed_size += 8 + 8 + 13 + 3;
     assert_eq!(assumed_size, atom.body_size());
     assert_eq!(urids.tuple, atom.body_type());
 

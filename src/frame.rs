@@ -31,10 +31,6 @@ pub trait WritingFrame<'a> {
     /// Also, this function is unsafe since one can mess up atom structures.
     unsafe fn write_raw(&mut self, data: &[u8]) -> Result<&'a mut [u8], ()>;
 
-    unsafe fn write_padding(&mut self) -> Result<(), ()>;
-
-    fn get_written_bytes(&self) -> usize;
-
     fn get_header(&self) -> &AtomHeader;
 
     fn get_header_mut(&mut self) -> &mut AtomHeader;
@@ -106,18 +102,8 @@ pub trait WritingFrameExt<'a, A: AtomBody + ?Sized>: WritingFrame<'a> + Sized {
 
 pub struct RootFrame<'a, A: AtomBody + ?Sized> {
     header: &'a mut AtomHeader,
-    n_bytes_written: usize,
     free_data: &'a mut [u8],
     phantom: PhantomData<A>,
-}
-
-impl<'a, A> Drop for RootFrame<'a, A>
-where
-    A: AtomBody + ?Sized,
-{
-    fn drop(&mut self) {
-        unsafe { self.write_padding() }.unwrap();
-    }
 }
 
 impl<'a, A: AtomBody + ?Sized> RootFrame<'a, A> {
@@ -126,7 +112,6 @@ impl<'a, A: AtomBody + ?Sized> RootFrame<'a, A> {
         header.size = 0;
         RootFrame {
             header: header,
-            n_bytes_written: 0,
             free_data: data,
             phantom: PhantomData,
         }
@@ -143,7 +128,6 @@ impl<'a, A: AtomBody + ?Sized> RootFrame<'a, A> {
         let free_data = std::slice::from_raw_parts_mut(data_ptr.add(data.len()), n_free_bytes);
 
         target_data.copy_from_slice(data);
-        self.n_bytes_written += data.len();
         self.free_data = free_data;
         Ok(target_data)
     }
@@ -160,15 +144,6 @@ impl<'a, A: AtomBody + ?Sized> WritingFrame<'a> for RootFrame<'a, A> {
 
         // Construct a reference to the newly written atom.
         Ok(target_data)
-    }
-
-    unsafe fn write_padding(&mut self) -> Result<(), ()> {
-        let pad = get_pad(self.get_written_bytes() % 8);
-        self.internal_write_raw(pad).map(|_| ())
-    }
-
-    fn get_written_bytes(&self) -> usize {
-        self.n_bytes_written
     }
 
     fn get_header(&self) -> &AtomHeader {
@@ -196,7 +171,18 @@ where
     A: AtomBody + ?Sized,
 {
     fn drop(&mut self) {
-        unsafe { self.write_padding() }.unwrap();
+        let pad: &[u8] = match 8 - (self.parent.get_header().size % 8) {
+            0 => &[0; 0],
+            1 => &[0; 1],
+            2 => &[0; 2],
+            3 => &[0; 3],
+            4 => &[0; 4],
+            5 => &[0; 5],
+            6 => &[0; 6],
+            7 => &[0; 7],
+            _ => panic!("invalid pad size"),
+        };
+        unsafe { self.parent.write_raw(pad).unwrap() };
     }
 }
 
@@ -208,15 +194,6 @@ where
         let data = self.parent.write_raw(data)?;
         self.header.size += data.len() as i32;
         Ok(data)
-    }
-
-    unsafe fn write_padding(&mut self) -> Result<(), ()> {
-        let pad = get_pad(self.get_written_bytes() % 8);
-        self.parent.write_raw(pad).map(|_| ())
-    }
-
-    fn get_written_bytes(&self) -> usize {
-        self.parent.get_written_bytes()
     }
 
     fn get_header(&self) -> &AtomHeader {
