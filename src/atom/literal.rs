@@ -1,4 +1,5 @@
-use crate::atom::AtomBody;
+use crate::atom::array::{ArrayAtomBody, ArrayAtomHeader};
+use crate::atom::{Atom, AtomBody, AtomHeader};
 use crate::frame::{WritingFrame, WritingFrameExt};
 use crate::uris;
 use std::ffi::CStr;
@@ -7,14 +8,28 @@ use urid::URID;
 
 #[repr(C)]
 pub struct LiteralHeader {
-    datatype: c_uint,
-    lang: c_uint,
+    pub datatype: c_uint,
+    pub lang: c_uint,
 }
 
-#[repr(C)]
-pub struct Literal {
-    header: LiteralHeader,
-    string: [u8],
+pub type Literal = ArrayAtomBody<LiteralHeader, u8>;
+
+impl ArrayAtomHeader for LiteralHeader {
+    type InitializationParameter = URID;
+
+    fn initialize<'a, W, T>(writer: &mut W, language: &URID) -> Result<(), ()>
+    where
+        T: 'static + Sized + Copy,
+        ArrayAtomBody<Self, T>: AtomBody,
+        W: WritingFrame<'a> + WritingFrameExt<'a, ArrayAtomBody<Self, T>>,
+    {
+        let header = LiteralHeader {
+            datatype: 0,
+            lang: *language,
+        };
+        unsafe { writer.write_sized(&header, true)? };
+        Ok(())
+    }
 }
 
 impl AtomBody for Literal {
@@ -32,12 +47,23 @@ impl AtomBody for Literal {
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
     {
-        let header = LiteralHeader {
-            datatype: 0,
-            lang: *language,
-        };
-        unsafe { writer.write_sized(&header, true)? };
-        Ok(())
+        Self::__initialize_body(writer, language)
+    }
+
+    unsafe fn widen_ref(header: &AtomHeader) -> Result<&Atom<Self>, ()> {
+        Self::__widen_ref(header)
+    }
+}
+
+impl Atom<Literal> {
+    pub fn as_str(&self) -> Result<&str, std::str::Utf8Error> {
+        let bytes = &self.body.data;
+        let bytes = &bytes[..bytes.len() - 1];
+        std::str::from_utf8(bytes)
+    }
+
+    pub fn lang(&self) -> URID {
+        self.body.header.lang
     }
 }
 
@@ -48,32 +74,15 @@ pub enum LiteralWritingError {
 
 pub trait LiteralWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, Literal> {
     fn write_string(&mut self, string: &str) -> Result<(), LiteralWritingError> {
-        if self.get_header().size as usize > std::mem::size_of::<LiteralHeader>() {
+        if Literal::was_data_written(self) {
             return Err(LiteralWritingError::NotFirstCall);
         }
 
-        let bytes = string.as_bytes();
-        match unsafe { self.write_raw(bytes, false) } {
-            Ok(_) => (),
-            Err(_) => return Err(LiteralWritingError::InsufficientSpace),
-        }
+        Literal::append(self, string.as_bytes())
+            .map_err(|_| LiteralWritingError::InsufficientSpace)?;
 
-        let termination_successfull = match bytes.last() {
-            Some(byte) => {
-                if *byte != 0 {
-                    unsafe { self.write_sized(&0u8, true) }.is_ok()
-                } else {
-                    unsafe { self.write_sized(&(), true) }.is_ok()
-                }
-            }
-            None => unsafe { self.write_sized(&0u8, true) }.is_ok(),
-        };
-
-        if termination_successfull {
-            Ok(())
-        } else {
-            Err(LiteralWritingError::InsufficientSpace)
-        }
+        // Write the null terminator, as `string.as_bytes()` will never contain one.
+        Literal::push(self, 0).map_err(|_| LiteralWritingError::InsufficientSpace)
     }
 }
 

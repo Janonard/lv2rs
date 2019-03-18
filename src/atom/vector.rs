@@ -1,4 +1,5 @@
-use crate::atom::AtomBody;
+use crate::atom::array::{ArrayAtomBody, ArrayAtomHeader};
+use crate::atom::{Atom, AtomBody, AtomHeader};
 use crate::frame::{WritingFrame, WritingFrameExt};
 use crate::uris;
 use std::ffi::CStr;
@@ -12,13 +13,24 @@ pub struct VectorHeader {
     child_type: c_uint,
 }
 
-#[repr(C)]
-pub struct Vector<T>
-where
-    T: 'static + AtomBody + Sized + Copy,
-{
-    header: VectorHeader,
-    data: [T],
+pub type Vector<T> = ArrayAtomBody<VectorHeader, T>;
+
+impl ArrayAtomHeader for VectorHeader {
+    type InitializationParameter = URID;
+
+    fn initialize<'a, W, T>(writer: &mut W, child_type: &URID) -> Result<(), ()>
+    where
+        T: 'static + Sized + Copy,
+        ArrayAtomBody<Self, T>: AtomBody,
+        W: WritingFrame<'a> + WritingFrameExt<'a, ArrayAtomBody<Self, T>>,
+    {
+        let header = VectorHeader {
+            child_size: size_of::<T>() as u32,
+            child_type: *child_type,
+        };
+        unsafe { writer.write_sized(&header, true)? };
+        Ok(())
+    }
 }
 
 impl<T> AtomBody for Vector<T>
@@ -39,12 +51,28 @@ where
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
     {
-        let header = VectorHeader {
-            child_size: size_of::<T>() as u32,
-            child_type: T::get_urid(urids),
-        };
-        unsafe { writer.write_sized(&header, true)? };
-        Ok(())
+        Self::__initialize_body(writer, &T::get_urid(urids))
+    }
+
+    unsafe fn widen_ref(header: &AtomHeader) -> Result<&Atom<Self>, ()> {
+        Self::__widen_ref(header)
+    }
+}
+
+impl<T> Atom<Vector<T>>
+where
+    T: 'static + AtomBody + Sized + Copy,
+{
+    pub fn child_body_size(&self) -> usize {
+        self.body.header.child_size as usize
+    }
+
+    pub fn child_body_type(&self) -> URID {
+        self.body.header.child_type
+    }
+
+    pub fn as_slice(&self) -> &[T] {
+        &self.body.data
     }
 }
 
@@ -54,16 +82,11 @@ where
     Self: WritingFrame<'a> + WritingFrameExt<'a, Vector<T>>,
 {
     fn push(&mut self, value: T) -> Result<(), ()> {
-        unsafe { self.write_sized(&value, false)? };
-        Ok(())
+        Vector::<T>::push(self, value)
     }
 
     fn append(&mut self, slice: &[T]) -> Result<(), ()> {
-        let data = unsafe {
-            std::slice::from_raw_parts(slice.as_ptr() as *const u8, std::mem::size_of_val(slice))
-        };
-        unsafe { self.write_raw(data, false)? };
-        Ok(())
+        Vector::<T>::append(self, slice)
     }
 }
 

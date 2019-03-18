@@ -1,4 +1,4 @@
-use crate::atom::AtomBody;
+use crate::atom::{Atom, AtomBody, AtomHeader};
 use crate::frame::{WritingFrame, WritingFrameExt};
 use crate::uris;
 use std::ffi::CStr;
@@ -11,7 +11,7 @@ pub trait ScalarAtomBody {
 
 impl<T> AtomBody for T
 where
-    T: 'static + ScalarAtomBody,
+    T: 'static + Sized + ScalarAtomBody,
 {
     type InitializationParameter = Self;
 
@@ -27,8 +27,18 @@ where
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
     {
-        unsafe { writer.write_sized(parameter, true)? };
+        unsafe { writer.write_sized(parameter, false)? };
         Ok(())
+    }
+
+    unsafe fn widen_ref(header: &AtomHeader) -> Result<&Atom<Self>, ()> {
+        if header.size as usize == std::mem::size_of::<Self>() {
+            Ok((header as *const AtomHeader as *const Atom<Self>)
+                .as_ref()
+                .unwrap())
+        } else {
+            Err(())
+        }
     }
 }
 

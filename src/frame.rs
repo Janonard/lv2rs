@@ -154,11 +154,11 @@ impl<'a, A: AtomBody + ?Sized> WritingFrame<'a> for RootFrame<'a, A> {
             *byte = 0;
         }
         self.n_bytes_written += n_written_bytes;
-        self.header.size += n_written_bytes as i32;
+        self.header.size += n_payload_bytes as i32;
         self.free_data = free_data;
 
         // Construct a reference to the newly written atom.
-        Ok((target_data, n_written_bytes))
+        Ok((target_data, n_payload_bytes))
     }
 
     fn get_header(&self) -> &AtomHeader {

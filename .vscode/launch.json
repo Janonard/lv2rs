@@ -7,7 +7,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'lv2rs-atom'",
+            "name": "unit tests",
             "cargo": {
                 "args": [
                     "test",
@@ -17,6 +17,23 @@
                 ],
                 "filter": {
                     "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "integration tests",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=lv2rs-atom"
+                ],
+                "filter": {
+                    "kind": "test"
                 }
             },
             "args": [],

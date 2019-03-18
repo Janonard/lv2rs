@@ -4,6 +4,7 @@ use std::ffi::CStr;
 use std::os::raw::c_int;
 use urid::URID;
 
+pub mod array;
 pub mod literal;
 pub mod scalar;
 pub mod string;
@@ -29,6 +30,8 @@ pub trait AtomBody {
     ) -> Result<(), ()>
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>;
+
+    unsafe fn widen_ref(header: &AtomHeader) -> Result<&Atom<Self>, ()>;
 }
 
 #[derive(Clone)]
@@ -36,6 +39,16 @@ pub trait AtomBody {
 pub struct Atom<A: AtomBody + ?Sized> {
     pub header: AtomHeader,
     pub body: A,
+}
+
+impl<A: AtomBody + ?Sized> Atom<A> {
+    pub fn body_size(&self) -> usize {
+        self.header.size as usize
+    }
+
+    pub fn body_type(&self) -> URID {
+        self.header.atom_type
+    }
 }
 
 impl<A: AtomBody + ?Sized> std::ops::Deref for Atom<A> {
