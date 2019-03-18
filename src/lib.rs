@@ -15,4 +15,5 @@ pub mod prelude {
     pub use crate::atom::literal::LiteralWritingFrame;
     pub use crate::atom::string::AtomStringWritingFrame;
     pub use crate::atom::vector::VectorWritingFrame;
+    pub use crate::atom::tuple::TupleWritingFrame;
 }

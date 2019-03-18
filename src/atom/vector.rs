@@ -28,7 +28,7 @@ impl ArrayAtomHeader for VectorHeader {
             child_size: size_of::<T>() as u32,
             child_type: *child_type,
         };
-        unsafe { writer.write_sized(&header, true)? };
+        unsafe { writer.write_sized(&header)? };
         Ok(())
     }
 }

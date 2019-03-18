@@ -1,6 +1,6 @@
 use crate::atom::{Atom, AtomBody, AtomHeader};
 use crate::frame::{WritingFrame, WritingFrameExt};
-use std::mem::{size_of, size_of_val, transmute};
+use std::mem::{size_of, transmute};
 
 pub trait ArrayAtomHeader: Sized {
     type InitializationParameter: ?Sized;
@@ -13,6 +13,19 @@ pub trait ArrayAtomHeader: Sized {
         T: 'static + Sized + Copy,
         ArrayAtomBody<Self, T>: AtomBody,
         W: WritingFrame<'a> + WritingFrameExt<'a, ArrayAtomBody<Self, T>>;
+}
+
+impl ArrayAtomHeader for () {
+    type InitializationParameter = ();
+
+    fn initialize<'a, W, T>(_: &mut W, _: &()) -> Result<(), ()>
+    where
+        T: 'static + Sized + Copy,
+        ArrayAtomBody<Self, T>: AtomBody,
+        W: WritingFrame<'a> + WritingFrameExt<'a, ArrayAtomBody<Self, T>>,
+    {
+        Ok(())
+    }
 }
 
 #[repr(C)]
@@ -74,7 +87,7 @@ where
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
     {
-        unsafe { writer.write_sized(&value, false)? };
+        unsafe { writer.write_sized(&value)? };
         Ok(())
     }
 
@@ -85,7 +98,7 @@ where
         let data = unsafe {
             std::slice::from_raw_parts(slice.as_ptr() as *const u8, std::mem::size_of_val(slice))
         };
-        unsafe { writer.write_raw(data, false)? };
+        unsafe { writer.write_raw(data)? };
         Ok(())
     }
 }

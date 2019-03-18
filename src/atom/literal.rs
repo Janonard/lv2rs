@@ -27,7 +27,7 @@ impl ArrayAtomHeader for LiteralHeader {
             datatype: 0,
             lang: *language,
         };
-        unsafe { writer.write_sized(&header, true)? };
+        unsafe { writer.write_sized(&header)? };
         Ok(())
     }
 }

@@ -1,24 +1,11 @@
-use crate::atom::array::{ArrayAtomBody, ArrayAtomHeader};
+use crate::atom::array::ArrayAtomBody;
 use crate::atom::{Atom, AtomBody, AtomHeader};
 use crate::frame::{WritingFrame, WritingFrameExt};
 use crate::uris;
 use std::ffi::CStr;
 use urid::URID;
 
-impl ArrayAtomHeader for () {
-    type InitializationParameter = ();
-
-    fn initialize<'a, W, T>(_: &mut W, _: &()) -> Result<(), ()>
-    where
-        T: 'static + Sized + Copy,
-        ArrayAtomBody<Self, T>: AtomBody,
-        W: WritingFrame<'a> + WritingFrameExt<'a, ArrayAtomBody<Self, T>>,
-    {
-        Ok(())
-    }
-}
-
-pub type AtomString = ArrayAtomBody<(), u8>;
+pub type AtomString = ArrayAtomBody<(), i8>;
 
 impl AtomBody for AtomString {
     type InitializationParameter = ();
@@ -45,7 +32,7 @@ impl AtomBody for AtomString {
 
 impl Atom<AtomString> {
     pub fn as_cstr(&self) -> Result<&CStr, std::ffi::FromBytesWithNulError> {
-        CStr::from_bytes_with_nul(&self.body.data)
+        CStr::from_bytes_with_nul(unsafe { std::mem::transmute::<&[i8], &[u8]>(&self.body.data) })
     }
 }
 
@@ -60,8 +47,10 @@ pub trait AtomStringWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, Ato
             return Err(AtomStringWritingError::NotFirstCall);
         }
 
-        AtomString::append(self, string.to_bytes())
-            .map_err(|_| AtomStringWritingError::InsufficientSpace)?;
+        AtomString::append(self, unsafe {
+            std::mem::transmute::<&[u8], &[i8]>(string.to_bytes())
+        })
+        .map_err(|_| AtomStringWritingError::InsufficientSpace)?;
 
         // Write the null terminator, as `string.as_bytes()` will never contain one.
         AtomString::push(self, 0).map_err(|_| AtomStringWritingError::InsufficientSpace)

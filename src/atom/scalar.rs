@@ -27,7 +27,7 @@ where
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
     {
-        unsafe { writer.write_sized(parameter, false)? };
+        unsafe { writer.write_sized(parameter)? };
         Ok(())
     }
 
