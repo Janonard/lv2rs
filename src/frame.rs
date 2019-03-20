@@ -3,20 +3,6 @@ use crate::uris::MappedURIDs;
 use std::marker::PhantomData;
 use std::mem::size_of;
 
-fn get_pad(size: usize) -> &'static [u8] {
-    match size {
-        0 => &[0; 0],
-        1 => &[0; 1],
-        2 => &[0; 2],
-        3 => &[0; 3],
-        4 => &[0; 4],
-        5 => &[0; 5],
-        6 => &[0; 6],
-        7 => &[0; 7],
-        _ => panic!("invalid pad size"),
-    }
-}
-
 pub trait WritingFrame<'a> {
     /// Try to write out a slice of bytes into the atom space.
     ///
@@ -81,22 +67,8 @@ pub trait WritingFrameExt<'a, A: AtomBody + ?Sized>: WritingFrame<'a> + Sized {
         Ok(writer)
     }
 
-    unsafe fn get_atom(&self) -> &Atom<A>
-    where
-        Atom<A>: Sized,
-    {
-        (self.get_header() as *const AtomHeader as *const Atom<A>)
-            .as_ref()
-            .unwrap()
-    }
-
-    unsafe fn get_atom_mut(&mut self) -> &mut Atom<A>
-    where
-        Atom<A>: Sized,
-    {
-        (self.get_header_mut() as *mut AtomHeader as *mut Atom<A>)
-            .as_mut()
-            .unwrap()
+    unsafe fn get_atom(&self) -> Result<&Atom<A>, ()> {
+        A::widen_ref(self.get_header())
     }
 }
 
@@ -172,7 +144,6 @@ where
 {
     fn drop(&mut self) {
         let pad: &[u8] = match 8 - (self.parent.get_header().size % 8) {
-            0 => &[0; 0],
             1 => &[0; 1],
             2 => &[0; 2],
             3 => &[0; 3],
@@ -180,6 +151,7 @@ where
             5 => &[0; 5],
             6 => &[0; 6],
             7 => &[0; 7],
+            8 => &[0; 0],
             _ => panic!("invalid pad size"),
         };
         unsafe { self.parent.write_raw(pad).unwrap() };

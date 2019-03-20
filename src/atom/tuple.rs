@@ -1,5 +1,6 @@
 use crate::atom::array::ArrayAtomBody;
-use crate::atom::{Atom, AtomBody, AtomHeader, Chunk};
+use crate::atom::chunk::*;
+use crate::atom::{Atom, AtomBody, AtomHeader};
 use crate::frame::{NestedFrame, WritingFrame, WritingFrameExt};
 use crate::uris;
 use std::ffi::CStr;
@@ -30,38 +31,9 @@ impl AtomBody for Tuple {
     }
 }
 
-pub struct Iter<'a> {
-    data: &'a [u8],
-    position: usize,
-}
-
-impl<'a> Iterator for Iter<'a> {
-    type Item = &'a Atom<Chunk>;
-
-    fn next(&mut self) -> Option<&'a Atom<Chunk>> {
-        if self.position >= self.data.len() {
-            return None;
-        }
-
-        let data = &self.data[self.position..];
-        if data.len() < std::mem::size_of::<AtomHeader>() {
-            return None;
-        }
-        let header = unsafe { (data.as_ptr() as *const AtomHeader).as_ref() }?;
-        let chunk = unsafe { Chunk::widen_ref(header) }.unwrap();
-        self.position += std::mem::size_of::<AtomHeader>() + (chunk.header.size as usize);
-        self.position += self.position % 8; // padding
-
-        Some(chunk)
-    }
-}
-
 impl Atom<Tuple> {
-    pub fn iter(&self) -> Iter {
-        Iter {
-            data: &self.body.data,
-            position: 0,
-        }
+    pub fn iter(&self) -> impl Iterator<Item = &Atom<Chunk>> {
+        ChunkIterator::<()>::new(&self.body.data).map(|(_, chunk): (&(), &Atom<Chunk>)| chunk)
     }
 }
 

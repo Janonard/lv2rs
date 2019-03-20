@@ -1,12 +1,14 @@
 use crate::frame::{WritingFrame, WritingFrameExt};
-use crate::uris::{self, MappedURIDs};
+use crate::uris::MappedURIDs;
 use std::ffi::CStr;
 use std::os::raw::c_int;
 use urid::URID;
 
 pub mod array;
+pub mod chunk;
 pub mod literal;
 pub mod scalar;
+pub mod sequence;
 pub mod string;
 pub mod tuple;
 pub mod vector;
@@ -33,49 +35,6 @@ pub trait AtomBody {
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>;
 
     unsafe fn widen_ref(header: &AtomHeader) -> Result<&Atom<Self>, ()>;
-}
-
-pub type Chunk = [u8];
-
-impl Atom<Chunk> {
-    pub fn cast<A: AtomBody + ?Sized>(&self, urids: &uris::MappedURIDs) -> Result<&Atom<A>, ()> {
-        if self.header.atom_type == A::get_urid(urids) {
-            unsafe { A::widen_ref(&self.header) }
-        } else {
-            Err(())
-        }
-    }
-}
-
-impl AtomBody for Chunk {
-    type InitializationParameter = [u8];
-
-    fn get_uri() -> &'static CStr {
-        unsafe { CStr::from_bytes_with_nul_unchecked(uris::CHUNK_TYPE_URI) }
-    }
-
-    fn get_urid(urids: &uris::MappedURIDs) -> URID {
-        urids.chunk
-    }
-
-    fn initialize_body<'a, W>(writer: &mut W, data: &[u8]) -> Result<(), ()>
-    where
-        W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
-    {
-        unsafe { writer.write_raw(data) }.map(|_| ())
-    }
-
-    unsafe fn widen_ref(header: &AtomHeader) -> Result<&Atom<Self>, ()> {
-        let size = header.size as usize;
-
-        // This is were the unsafe things happen!
-        // We know the length of the string, therefore we can create a fat pointer to the atom.
-        let fat_ptr: (*const AtomHeader, usize) = (header as *const AtomHeader, size);
-        let fat_ptr: *const Atom<Self> = std::mem::transmute(fat_ptr);
-        let atom_ref: &Atom<Self> = fat_ptr.as_ref().unwrap();
-
-        Ok(atom_ref)
-    }
 }
 
 #[derive(Clone)]

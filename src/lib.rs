@@ -14,6 +14,7 @@ pub mod prelude {
     // Writing frame extensions
     pub use crate::atom::literal::LiteralWritingFrame;
     pub use crate::atom::string::AtomStringWritingFrame;
-    pub use crate::atom::vector::VectorWritingFrame;
+    pub use crate::atom::sequence::SequenceWritingFrame;
     pub use crate::atom::tuple::TupleWritingFrame;
+    pub use crate::atom::vector::VectorWritingFrame;
 }

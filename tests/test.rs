@@ -188,9 +188,78 @@ fn test_tuple() {
     let integer = iter.next().unwrap().cast::<i32>(&urids).unwrap();
     assert_eq!(42, **integer);
 
-    let vector = iter.next().unwrap().cast::<Vector<i32>>(&urids).unwrap();
+    let vector = iter.next().unwrap();
+    let vector = vector.cast::<Vector<i32>>(&urids);
+    let vector = vector.unwrap();
     assert_eq!([0, 2, 4], *vector.as_slice());
 
     let literal = iter.next().unwrap().cast::<Literal>(&urids).unwrap();
     assert_eq!("Hello World!", literal.as_str().unwrap());
+}
+
+#[test]
+fn test_sequence() {
+    use atom::atom::sequence::{Sequence, TimeStamp, TimeUnit};
+    use atom::atom::tuple::Tuple;
+
+    let urids = MappedURIDs::default();
+
+    // Creating the atom space.
+    let mut atom_space = vec![0u8; 256];
+    let atom = unsafe { (atom_space.as_mut_ptr() as *mut AtomHeader).as_mut() }.unwrap();
+    atom.size = 256 - 8;
+
+    // Creating the ports and connecting them.
+    let mut out_port: AtomOutputPort<Sequence> = AtomOutputPort::new();
+    out_port.connect_port(atom);
+    let mut in_port: AtomInputPort<Sequence> = AtomInputPort::new(&urids);
+    in_port.connect_port(atom as &AtomHeader);
+
+    // Writing.
+    {
+        let mut frame = out_port.write_atom(&TimeUnit::Frames, &urids).unwrap();
+        assert_eq!(0, frame.get_header().size % 8);
+        frame
+            .push_event::<i32>(TimeStamp::Frames(0), &42, &urids)
+            .unwrap();
+        assert_eq!(0, frame.get_header().size % 8);
+
+        let old_atom_size = frame.get_header().size;
+        assert!(frame
+            .push_event::<i32>(TimeStamp::Beats(42.0), &42, &urids)
+            .is_err());
+        assert_eq!(old_atom_size, frame.get_header().size);
+
+        {
+            let mut tuple_frame = frame
+                .push_event::<Tuple>(TimeStamp::Frames(1), &(), &urids)
+                .unwrap();
+            assert_eq!(0, tuple_frame.get_header().size % 8);
+            tuple_frame.push_atom::<i32>(&1, &urids).unwrap();
+            assert_eq!(0, tuple_frame.get_header().size % 8);
+            tuple_frame.push_atom::<i32>(&2, &urids).unwrap();
+            assert_eq!(0, tuple_frame.get_header().size % 8);
+        }
+        assert_eq!(0, frame.get_header().size % 8);
+    }
+
+    // Reading.
+    let atom = in_port.get_atom().unwrap();
+    let mut sequence_iter = atom.iter(&urids).unwrap();
+
+    let (time_stamp, integer) = sequence_iter.next().unwrap();
+    assert_eq!(TimeStamp::Frames(0), time_stamp);
+    let integer: &Atom<i32> = integer.cast(&urids).unwrap();
+    assert_eq!(42, **integer);
+
+    let (time_stamp, tuple) = sequence_iter.next().unwrap();
+    assert_eq!(TimeStamp::Frames(1), time_stamp);
+    let tuple: &Atom<Tuple> = tuple.cast(&urids).unwrap();
+    {
+        let mut iter = tuple.iter();
+        let integer: &Atom<i32> = iter.next().unwrap().cast(&urids).unwrap();
+        assert_eq!(1, **integer);
+        let integer: &Atom<i32> = iter.next().unwrap().cast(&urids).unwrap();
+        assert_eq!(2, **integer);
+    }
 }
