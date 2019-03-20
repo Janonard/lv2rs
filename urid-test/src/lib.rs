@@ -13,19 +13,12 @@ impl lv2::Plugin for UridTestPlugin {
         _descriptor: &lv2::Descriptor,
         _rate: f64,
         _bundle_path: &CStr,
-        features: Option<&[*mut lv2::Feature]>,
-    ) -> Self {
-        let instance = Self {
-            input: lv2::ports::AudioInputPort::new(),
-            output: lv2::ports::AudioOutputPort::new(),
-        };
+        features: Option<&lv2::FeaturesList>,
+    ) -> Option<Self> {
+        let features = features?;
 
-        let features = match features {
-            Some(features) => unsafe { lv2::Feature::map_features(features) },
-            None => return instance,
-        };
-        let map = urid::Map::try_from_features(&features).unwrap();
-        let unmap = urid::Unmap::try_from_features(&features).unwrap();
+        let map = urid::Map::try_from_features(features).unwrap();
+        let unmap = urid::Unmap::try_from_features(features).unwrap();
 
         let map_uri = CStr::from_bytes_with_nul(urid::uris::MAP_URI)
             .unwrap()
@@ -39,7 +32,10 @@ impl lv2::Plugin for UridTestPlugin {
 
         println!("{} is mapped to {:?}", map_urid, map_uri);
 
-        instance
+        Some(Self {
+            input: lv2::ports::AudioInputPort::new(),
+            output: lv2::ports::AudioOutputPort::new(),
+        })
     }
 
     unsafe fn connect_port(&mut self, port: u32, data: *mut ()) {

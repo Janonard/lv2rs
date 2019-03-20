@@ -21,22 +21,15 @@
 //!             descriptor: &core::Descriptor,
 //!             rate: f64,
 //!             bundle_path: &CStr,
-//!             features: Option<&[*mut core::Feature]>
+//!             features: Option<&core::FeaturesList>
 //!         ) -> Option<Self> where Self: Sized {
 //!
-//!             // First, we have to create a Hashmap from the features, since this speeds up the
-//!             // feature detection.
-//!             // If there are no features, we return None.
-//!             let features = match features {
-//!                 Some(features) => unsafe {core::Feature::map_features(features)},
-//!                 None => return None,
-//!             };
+//!             // Return `None` if there are no features.
+//!             let features = features?;
 //!
-//!             // Try to get the mapper and the un-mapper from the features map.
-//!             // Here, we simply unwrap the results for simplicity, but you should properly check
-//!             // them in production code.
-//!             let map = urid::Map::try_from_features(&features).unwrap();
-//!             let unmap = urid::Unmap::try_from_features(&features).unwrap();
+//!             // Try to get the mapper and the un-mapper from the features list.
+//!             let map = urid::Map::try_from_features(features)?;
+//!             let unmap = urid::Unmap::try_from_features(features)?;
 //!
 //!             // Create a URI, map it, and un-map it.
 //!             let github_uri = CStr::from_bytes_with_nul(b"https://github.com\0").unwrap();
@@ -80,10 +73,12 @@ impl Map {
     /// Try to find the mapping feature in the features map.
     ///
     /// If this function returns None if the host does not support mapping.
-    pub fn try_from_features<'a>(features: &'a HashMap<&CStr, *mut ()>) -> Option<&'a mut Self> {
-        match features.get(unsafe { CStr::from_bytes_with_nul_unchecked(uris::MAP_URI) }) {
-            Some(data) => Some(unsafe { (*data as *mut Self).as_mut() }.unwrap()),
-            None => None,
+    pub fn try_from_features<'a>(features: &core::FeaturesList) -> Option<&'static mut Self> {
+        unsafe {
+            core::Feature::get_feature::<Self>(
+                features,
+                CStr::from_bytes_with_nul(uris::MAP_URI).unwrap(),
+            )
         }
     }
 
@@ -113,10 +108,12 @@ impl Unmap {
     /// Try to find the unmapping feature in the features map.
     ///
     /// If this function returns None if the host does not support unmapping.
-    pub fn try_from_features<'a>(features: &'a HashMap<&CStr, *mut ()>) -> Option<&'a mut Self> {
-        match features.get(unsafe { CStr::from_bytes_with_nul_unchecked(uris::UNMAP_URI) }) {
-            Some(data) => Some(unsafe { (*data as *mut Self).as_mut() }.unwrap()),
-            None => None,
+    pub fn try_from_features(features: &core::FeaturesList) -> Option<&'static mut Self> {
+        unsafe {
+            core::Feature::get_feature::<Self>(
+                features,
+                CStr::from_bytes_with_nul(uris::UNMAP_URI).unwrap(),
+            )
         }
     }
 
@@ -136,14 +133,14 @@ impl Unmap {
 }
 
 /// Cached version of [Map](struct.Map.html)
-pub struct CachedMap<'a> {
-    raw: &'a mut Map,
+pub struct CachedMap {
+    raw: &'static mut Map,
     cache: HashMap<CString, URID>,
 }
 
-impl<'a> CachedMap<'a> {
+impl CachedMap {
     /// Create a new cached map from a mutable map reference.
-    pub fn new(raw: &'a mut Map) -> CachedMap<'a> {
+    pub fn new(raw: &'static mut Map) -> CachedMap {
         Self {
             raw: raw,
             cache: HashMap::new(),
@@ -153,14 +150,9 @@ impl<'a> CachedMap<'a> {
     /// Try to find the mapping feature in the features map.
     ///
     /// If this function returns `None` if the host does not support mapping.
-    pub fn try_from_features(features: &'a HashMap<&CStr, *mut ()>) -> Option<Self> {
-        let raw_map = Map::try_from_features(features);
-        if raw_map.is_none() {
-            return None;
-        } else {
-            let raw_map = raw_map.unwrap();
-            Some(Self::new(raw_map))
-        }
+    pub fn try_from_features(features: &core::FeaturesList) -> Option<Self> {
+        let raw_map = Map::try_from_features(features)?;
+        Some(Self::new(raw_map))
     }
 
     /// Return a reference to the cache.
@@ -185,14 +177,14 @@ impl<'a> CachedMap<'a> {
     }
 }
 /// Cached version of [Unmap](struct.Unmap.html)
-pub struct CachedUnmap<'a> {
-    raw: &'a mut Unmap,
+pub struct CachedUnmap {
+    raw: &'static mut Unmap,
     cache: HashMap<URID, CString>,
 }
 
-impl<'a> CachedUnmap<'a> {
+impl CachedUnmap {
     /// Create a new cached unmap from a mutable unmap reference.
-    pub fn new(raw_map: &'a mut Unmap) -> Self {
+    pub fn new(raw_map: &'static mut Unmap) -> Self {
         Self {
             raw: raw_map,
             cache: HashMap::new(),
@@ -202,14 +194,9 @@ impl<'a> CachedUnmap<'a> {
     /// Try to find the unmapping feature in the features map.
     ///
     /// If this function returns `None` if the host does not support unmapping.
-    pub fn try_from_features(features: &'a HashMap<&CStr, *mut ()>) -> Option<Self> {
-        let raw_unmap = Unmap::try_from_features(features);
-        if raw_unmap.is_none() {
-            return None;
-        } else {
-            let raw_unmap = raw_unmap.unwrap();
-            Some(Self::new(raw_unmap))
-        }
+    pub fn try_from_features(features: &core::FeaturesList) -> Option<Self> {
+        let raw_unmap = Unmap::try_from_features(features)?;
+        Some(Self::new(raw_unmap))
     }
 
     /// Return a reference to the cache.
