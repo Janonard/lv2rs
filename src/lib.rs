@@ -8,7 +8,7 @@ mod plugin;
 pub mod ports;
 pub mod uris;
 
-pub use feature::Feature;
+pub use feature::{Feature, FeaturesList};
 pub use plugin::*;
 
 /// Create  lv2 export functions.
@@ -35,12 +35,12 @@ pub use plugin::*;
 ///             _descriptor: &core::Descriptor,
 ///             _rate: f64,
 ///             _bundle_path: &CStr,
-///             _features: Option<&[*mut core::Feature]>
+///             _features: Option<&core::FeaturesList>
 ///         ) -> Option<Self> {
 ///             Some(Self {})
 ///         }
 ///
-///         unsafe fn connect_port(&mut self, port: u32, data: *mut ()) {}
+///         unsafe fn connect_port(&mut self, _port: u32, _data: *mut ()) {}
 ///
 ///         fn run(&mut self, _n_samples: u32) {}
 ///     }

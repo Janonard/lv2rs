@@ -23,7 +23,7 @@ impl core::Plugin for TestPlugin {
         _descriptor: &core::Descriptor,
         _rate: f64,
         _bundle_path: &CStr,
-        _features: Option<&[*mut core::Feature]>,
+        _features: Option<&core::FeaturesList>,
     ) -> Option<Self> {
         Some(Self {
             audio_in: AudioInputPort::new(),

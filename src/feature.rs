@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::ffi::CStr;
 use std::os::raw::*;
 
@@ -28,6 +27,9 @@ pub struct Feature {
     data: *mut c_void,
 }
 
+/// The slice that contains the feature references.
+pub type FeaturesList = [&'static Feature];
+
 impl Feature {
     /// Try to get the URI of the feature.
     ///
@@ -50,62 +52,61 @@ impl Feature {
         (self.data as *mut T).as_mut()
     }
 
-    /// Walk through the provided features and collect them in a map.
+    /// Try to find a feature in the features list by it's URI.
     ///
-    /// This is usually the first call to discover a host's features: When a plugin's
-    /// [`instantiate`](trait.Plugin.html#tymethod.instantiate) function is called, you pass the
-    /// given `Feature` array pointer to this function, which creates a map that maps every
-    /// feature's URI to it's data. However, since the type of the data is not known, only a raw
-    /// pointer is included, you have to deref it yourself.
-    pub unsafe fn map_features(features: &[*mut Feature]) -> HashMap<&CStr, *mut ()> {
-        let mut map = HashMap::new();
-        for feature in features {
-            match feature.as_mut() {
-                Some(feature) => {
-                    map.insert(CStr::from_ptr(feature.uri), feature.data as *mut ());
-                }
-                None => break,
-            }
-        }
-        map
+    /// This function is safe, since the data pointer is not touched at all and therefore, no UB
+    /// can be triggered.
+    pub fn get_feature_raw(features: &FeaturesList, uri: &CStr) -> Option<*mut c_void> {
+        Some(
+            (features
+                .iter()
+                .find(|feature| unsafe { CStr::from_ptr(feature.uri) } == uri)?)
+            .data,
+        )
+    }
+
+    /// Try to find a feature in the features list and cast the data.
+    ///
+    /// This function in unsafe, since it can not check if the data is of type T. It is your
+    /// responsibility to ensure the soundness of the cast.
+    pub unsafe fn get_feature<T>(features: &FeaturesList, uri: &CStr) -> Option<&'static mut T> {
+        let feature = Self::get_feature_raw(features, uri)?;
+        (feature as *mut T).as_mut()
     }
 }
 
 #[cfg(test)]
 #[test]
 fn test_map_features() {
-    let feature_0_uri = Box::new(b"http://example.org/Feature0\0");
-    let mut feature_0_data = 42.0;
-    let mut feature_0 = Feature {
-        uri: feature_0_uri.as_ptr() as *const c_char,
-        data: &mut feature_0_data as *mut f64 as *mut c_void,
+    const FEATURE_0_URI: &[u8] = b"http://example.org/Feature0\0";
+    const FEATURE_0_DATA: f64 = 42.0;
+    const FEATURE_0: Feature = Feature {
+        uri: FEATURE_0_URI.as_ptr() as *const c_char,
+        data: &FEATURE_0_DATA as *const f64 as *mut f64 as *mut c_void,
     };
 
-    let feature_1_uri = Box::new(b"http://example.org/Feature1\0");
-    let mut feature_1_data = 17.0;
-    let mut feature_1 = Feature {
-        uri: feature_1_uri.as_ptr() as *const c_char,
-        data: &mut feature_1_data as *mut f64 as *mut c_void,
+    const FEATURE_1_URI: &[u8] = b"http://example.org/Feature1\0";
+    const FEATURE_1_DATA: f64 = 17.0;
+    const FEATURE_1: Feature = Feature {
+        uri: FEATURE_1_URI.as_ptr() as *const c_char,
+        data: &FEATURE_1_DATA as *const f64 as *mut f64 as *mut c_void,
     };
 
-    let features: [*mut Feature; 3] = [&mut feature_0, &mut feature_1, std::ptr::null_mut()];
-    let features_map = unsafe { Feature::map_features(&features) };
-    assert_eq!(features_map.len(), 2);
+    const FEATURES: [&Feature; 2] = [&FEATURE_0, &FEATURE_1];
 
     unsafe {
-        // Create a clone of the uri. We want the HashMap to compare the content, not the addresses!
-        let feature_0_uri = feature_0_uri.clone();
-        let feature_0_uri = CStr::from_bytes_with_nul_unchecked(*feature_0_uri);
-        let mapped_f0_data = (features_map[&feature_0_uri] as *const f64)
-            .as_ref()
-            .unwrap();
-        assert_eq!(*mapped_f0_data, feature_0_data);
+        let feature_0_data = Feature::get_feature::<f64>(
+            &FEATURES,
+            CStr::from_bytes_with_nul(FEATURE_0_URI).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(42.0, *feature_0_data);
 
-        let feature_1_uri = feature_1_uri.clone();
-        let feature_1_uri = CStr::from_bytes_with_nul_unchecked(*feature_1_uri);
-        let mapped_f1_data = (features_map[&feature_1_uri] as *const f64)
-            .as_ref()
-            .unwrap();
-        assert_eq!(*mapped_f1_data, feature_1_data);
+        let feature_1_data = Feature::get_feature::<f64>(
+            &FEATURES,
+            CStr::from_bytes_with_nul(FEATURE_1_URI).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(17.0, *feature_1_data);
     }
 }

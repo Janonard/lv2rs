@@ -1,5 +1,5 @@
 //! General Plugin-related traits and functions.
-use crate::Feature;
+use crate::{Feature, FeaturesList};
 
 use std::ffi::CStr;
 use std::os::raw::*;
@@ -208,14 +208,14 @@ pub trait Plugin {
    ///
    /// Here, you should instantiate the plugin and supply it with general information. You can look
    /// at the plugin descriptor, the audio frame rate of the current session, the path from which
-   /// the host has loaded the plugin and an iterator over features supported by the host. If, for
-   /// one reason or another, you find yourself in a situation where you can't properly create a
-   /// plugin instance, you can return `None`.
+   /// the host has loaded the plugin and an slice of references to the features supported by the
+   /// host. If, for one reason or another, you find yourself in a situation where you can't
+   /// create a plugin instance, you can return `None`.
    fn instantiate(
       descriptor: &Descriptor,
       rate: f64,
       bundle_path: &CStr,
-      features: Option<&[*mut Feature]>,
+      features: Option<&FeaturesList>,
    ) -> Option<Self>
    where
       Self: Sized;
@@ -325,7 +325,7 @@ pub unsafe fn instantiate<P: Plugin>(
             }
          }
          Some(std::slice::from_raw_parts(
-            features as *const *mut Feature,
+            features as *const &'static Feature,
             length,
          ))
       }
