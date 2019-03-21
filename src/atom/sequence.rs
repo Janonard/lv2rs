@@ -151,8 +151,8 @@ pub trait SequenceWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, Seque
         }
 
         unsafe {
-            self.write_sized(&RawTimeStamp::from(time.clone())) ?;
-            let mut frame = self.create_atom_frame::<A>(urids) ?;
+            self.write_sized(&RawTimeStamp::from(time.clone()))?;
+            let mut frame = self.create_atom_frame::<A>(urids)?;
             A::initialize_body(&mut frame, parameter)?;
             Ok(frame)
         }

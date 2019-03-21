@@ -81,3 +81,5 @@ pub trait ObjectWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, Object>
         }
     }
 }
+
+impl<'a, W> ObjectWritingFrame<'a> for W where W: WritingFrame<'a> + WritingFrameExt<'a, Object> {}

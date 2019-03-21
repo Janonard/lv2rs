@@ -1,5 +1,6 @@
 extern crate lv2rs_atom as atom;
 
+use atom::ports::*;
 use atom::prelude::*;
 use atom::uris::MappedURIDs;
 
@@ -32,8 +33,6 @@ fn test_scalar() {
 
 #[test]
 fn test_literal() {
-    use atom::atom::literal::Literal;
-
     let urids = MappedURIDs::default();
 
     // Creating the atom space.
@@ -66,7 +65,6 @@ fn test_literal() {
 
 #[test]
 fn test_string() {
-    use atom::atom::string::AtomString;
     use std::ffi::CStr;
 
     let urids = MappedURIDs::default();
@@ -100,8 +98,6 @@ fn test_string() {
 
 #[test]
 fn test_vector() {
-    use atom::atom::vector::Vector;
-
     let urids = MappedURIDs::default();
 
     // Creating the atom space.
@@ -135,10 +131,6 @@ fn test_vector() {
 
 #[test]
 fn test_tuple() {
-    use atom::atom::literal::Literal;
-    use atom::atom::tuple::Tuple;
-    use atom::atom::vector::Vector;
-
     let urids = MappedURIDs::default();
 
     // Creating the atom space.
@@ -199,8 +191,7 @@ fn test_tuple() {
 
 #[test]
 fn test_sequence() {
-    use atom::atom::sequence::{Sequence, TimeStamp, TimeUnit};
-    use atom::atom::tuple::Tuple;
+    use atom::atom::sequence::{TimeStamp, TimeUnit};
 
     let urids = MappedURIDs::default();
 
