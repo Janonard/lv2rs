@@ -28,11 +28,11 @@ impl AtomBody for Chunk {
         urids.chunk
     }
 
-    fn initialize_body<'a, W>(writer: &mut W, data: &[u8]) -> Result<(), ()>
+    unsafe fn initialize_body<'a, W>(writer: &mut W, data: &[u8]) -> Result<(), ()>
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
     {
-        unsafe { writer.write_raw(data) }.map(|_| ())
+        writer.write_raw(data).map(|_| ())
     }
 
     unsafe fn widen_ref(header: &AtomHeader) -> Result<&Atom<Self>, ()> {

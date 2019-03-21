@@ -40,7 +40,7 @@ impl<A: AtomBody + ?Sized> AtomOutputPort<A> {
             )
         };
         let mut frame = RootFrame::new(header, data, urids);
-        A::initialize_body(&mut frame, parameter)?;
+        unsafe { A::initialize_body(&mut frame, parameter)? };
         Ok(frame)
     }
 }

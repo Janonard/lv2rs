@@ -18,7 +18,7 @@ impl AtomBody for AtomString {
         urids.string
     }
 
-    fn initialize_body<'a, W>(writer: &mut W, parameter: &()) -> Result<(), ()>
+    unsafe fn initialize_body<'a, W>(writer: &mut W, parameter: &()) -> Result<(), ()>
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
     {

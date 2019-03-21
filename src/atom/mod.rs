@@ -7,6 +7,7 @@ use urid::URID;
 pub mod array;
 pub mod chunk;
 pub mod literal;
+pub mod object;
 pub mod scalar;
 pub mod sequence;
 pub mod string;
@@ -27,7 +28,7 @@ pub trait AtomBody {
 
     fn get_urid(urids: &MappedURIDs) -> URID;
 
-    fn initialize_body<'a, W>(
+    unsafe fn initialize_body<'a, W>(
         writer: &mut W,
         parameter: &Self::InitializationParameter,
     ) -> Result<(), ()>

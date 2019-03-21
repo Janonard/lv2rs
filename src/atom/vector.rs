@@ -47,7 +47,7 @@ where
         urids.vector
     }
 
-    fn initialize_body<'a, W>(writer: &mut W, urids: &uris::MappedURIDs) -> Result<(), ()>
+    unsafe fn initialize_body<'a, W>(writer: &mut W, urids: &uris::MappedURIDs) -> Result<(), ()>
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
     {

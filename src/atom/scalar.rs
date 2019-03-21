@@ -23,11 +23,11 @@ where
         T::get_urid(urids)
     }
 
-    fn initialize_body<'a, W>(writer: &mut W, parameter: &Self) -> Result<(), ()>
+    unsafe fn initialize_body<'a, W>(writer: &mut W, parameter: &Self) -> Result<(), ()>
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
     {
-        unsafe { writer.write_sized(parameter)? };
+        writer.write_sized(parameter)?;
         Ok(())
     }
 

@@ -43,7 +43,7 @@ impl AtomBody for Literal {
         urids.literal
     }
 
-    fn initialize_body<'a, W>(writer: &mut W, language: &URID) -> Result<(), ()>
+    unsafe fn initialize_body<'a, W>(writer: &mut W, language: &URID) -> Result<(), ()>
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
     {

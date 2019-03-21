@@ -98,7 +98,7 @@ impl AtomBody for Sequence {
         urids.sequence
     }
 
-    fn initialize_body<'a, W>(writer: &mut W, parameter: &TimeUnit) -> Result<(), ()>
+    unsafe fn initialize_body<'a, W>(writer: &mut W, parameter: &TimeUnit) -> Result<(), ()>
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
     {
@@ -150,10 +150,12 @@ pub trait SequenceWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, Seque
             return Err(());
         }
 
-        unsafe { self.write_sized(&RawTimeStamp::from(time.clone())) }?;
-        let mut frame = unsafe { self.create_atom_frame::<A>(urids) }?;
-        A::initialize_body(&mut frame, parameter)?;
-        Ok(frame)
+        unsafe {
+            self.write_sized(&RawTimeStamp::from(time.clone())) ?;
+            let mut frame = self.create_atom_frame::<A>(urids) ?;
+            A::initialize_body(&mut frame, parameter)?;
+            Ok(frame)
+        }
     }
 }
 

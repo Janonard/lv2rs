@@ -19,7 +19,7 @@ impl AtomBody for Tuple {
         urids.tuple
     }
 
-    fn initialize_body<'a, W>(writer: &mut W, parameter: &()) -> Result<(), ()>
+    unsafe fn initialize_body<'a, W>(writer: &mut W, parameter: &()) -> Result<(), ()>
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
     {
@@ -43,9 +43,11 @@ pub trait TupleWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, Tuple> {
         parameter: &A::InitializationParameter,
         urids: &uris::MappedURIDs,
     ) -> Result<NestedFrame<'b, 'a, A>, ()> {
-        let mut frame = unsafe { self.create_atom_frame::<A>(urids)? };
-        A::initialize_body(&mut frame, parameter)?;
-        Ok(frame)
+        unsafe {
+            let mut frame = self.create_atom_frame::<A>(urids)?;
+            A::initialize_body(&mut frame, parameter)?;
+            Ok(frame)
+        }
     }
 }
 
