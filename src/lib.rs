@@ -1,3 +1,61 @@
+//! ## What are atoms?
+//!
+//! The general idea of atoms is to have a portable type system that can be used to exchange
+//! information between different plugins. On an abstract level, every atom has a header which
+//! contains the URID of the atom type and a size in bytes. Behind the header, there is a chunk of
+//! memory with the specified size. Since this data is supposed to be "plain old data" and
+//! therefore must not contain references to other objects, the host does not need to "understand"
+//! the atoms; It simply copies the data.
+//!
+//! There are several types of atoms which can be used to express almost any data:
+//!
+//! * Numbers: All types that implement the [`ScalarAtomBody`](scalar/trait.ScalarAtomBody.html)
+//! trait:
+//!     * `f32`
+//!     * `f64`
+//!     * `i32`
+//!     * `i64`
+//!     * `bool`
+//!     * `URID`
+//! * [`Literal`](literal/type.Literal.html): A proper UTF-8 string.
+//! * [`AtomString`](string/type.AtomString.html): An old-school ASCII string, also used for URIs.
+//! * [`Vector`](vector/type.Vector.html): Homogenous array of sized atoms, like numbers.
+//! * [`Tuple`](tuple/type.Tuple.html): Heterogenous array of atoms, including dynamically sized
+//! ones.
+//! * [`Sequence`](sequence/type.Sequence.html): Tuple with additional time stamps for every atom.
+//! Usually used for frame-perfect, event-based data.
+//! * [`Object`](object/type.Object.html): Compound type similar to tuples that maps URIDs to atoms.
+//! * [`Chunk`](chunk/type.Chunk.html): Simple chunk of bytes. Often used for unknown or
+//! not-yet-known atoms.
+//!
+//! The purpose of this crate is to provide means to correctly read and construct said objects.
+//!
+//! ## How does it work?
+//!
+//! ### Reading
+//!
+//! In vanilla LV2, everything is expressed with floating-point numbers. The host passes a pointer
+//! to a floating pointer number to the plugin and the plugin uses the number the pointer points to.
+//! Reading atoms is similiar, but not completely the same:
+//!
+//! The host passes a pointer to an atom header to the plugin. Now, the plugin has to interpret this
+//! header. It looks at the size and the type noted in the header and tries to "widen" the reference
+//! to a fully-grown atom reference. Since this might be a delicate task, it is done by the
+//! [`AtomInputPort`](ports/struct.AtomInputPort.html). Some atoms are easy to use, for example
+//! floats, but some require special methods to be usefull.
+//!
+//! ### Writing
+//!
+//! If a plugin has to write information to an atom port, the host provides the plugin with a pointer
+//! to a chunk of free space it can write to. An [`AtomOutputPort`](ports/struct.AtomOutputPort.html)
+//! can interpret this pointer and creates a writing frame for it using the
+//! [`write_atom`](ports/struct.AtomOutputPort.html#method.write_atom) method.
+//!
+//! Such [writing frames](frame/trait.WritingFrame.html) are able to write data to the provided
+//! chunk. However, most of their methods are unsafe since they do not check the resulting output
+//! for meaningfulness. Instead, you should use the safe methods provided by the writing frame
+//! extensions, which are tailored for specific atoms and guarantee the consistency of the resulting
+//! output.
 extern crate lv2rs_core as core;
 extern crate lv2rs_urid as urid;
 
