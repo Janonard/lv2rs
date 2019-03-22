@@ -191,8 +191,7 @@ fn test_tuple() {
 
 #[test]
 fn test_sequence() {
-    use atom::atom::sequence::{TimeStamp, TimeUnit};
-
+    use atom::sequence::{TimeStamp, TimeUnit};
     let urids = MappedURIDs::default();
 
     // Creating the atom space.

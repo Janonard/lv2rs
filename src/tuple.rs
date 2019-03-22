@@ -1,6 +1,5 @@
-use crate::atom::array::ArrayAtomBody;
-use crate::atom::chunk::*;
-use crate::atom::{Atom, AtomBody, AtomHeader};
+use crate::atom::{array::ArrayAtomBody, Atom, AtomBody, AtomHeader};
+use crate::chunk::*;
 use crate::frame::{NestedFrame, WritingFrame, WritingFrameExt};
 use crate::uris;
 use std::ffi::CStr;
