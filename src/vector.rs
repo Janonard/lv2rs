@@ -18,7 +18,7 @@ pub type Vector<T> = ArrayAtomBody<VectorHeader, T>;
 impl ArrayAtomHeader for VectorHeader {
     type InitializationParameter = URID;
 
-    fn initialize<'a, W, T>(writer: &mut W, child_type: &URID) -> Result<(), ()>
+    unsafe fn initialize<'a, W, T>(writer: &mut W, child_type: &URID) -> Result<(), ()>
     where
         T: 'static + Sized + Copy,
         ArrayAtomBody<Self, T>: AtomBody,
@@ -28,7 +28,7 @@ impl ArrayAtomHeader for VectorHeader {
             child_size: size_of::<T>() as u32,
             child_type: *child_type,
         };
-        unsafe { writer.write_sized(&header)? };
+        writer.write_sized(&header)?;
         Ok(())
     }
 }
@@ -37,25 +37,30 @@ impl<T> AtomBody for Vector<T>
 where
     T: 'static + AtomBody + Sized + Copy,
 {
-    type InitializationParameter = uris::MappedURIDs;
+    type InitializationParameter = T::MappedURIDs;
+
+    type MappedURIDs = uris::MappedURIDs;
 
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::VECTOR_TYPE_URI) }
     }
 
-    fn get_urid(urids: &uris::MappedURIDs) -> URID {
+    fn get_urid(urids: &Self::MappedURIDs) -> URID {
         urids.vector
     }
 
-    unsafe fn initialize_body<'a, W>(writer: &mut W, urids: &uris::MappedURIDs) -> Result<(), ()>
+    unsafe fn initialize_body<'a, W>(writer: &mut W, urids: &T::MappedURIDs) -> Result<(), ()>
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
     {
         Self::__initialize_body(writer, &T::get_urid(urids))
     }
 
-    unsafe fn widen_ref(header: &AtomHeader) -> Result<&Atom<Self>, ()> {
-        Self::__widen_ref(header)
+    unsafe fn widen_ref<'a>(
+        header: &'a AtomHeader,
+        urids: &uris::MappedURIDs,
+    ) -> Result<&'a Atom<Self>, ()> {
+        Self::__widen_ref(header, urids)
     }
 }
 
@@ -82,11 +87,11 @@ where
     Self: WritingFrame<'a> + WritingFrameExt<'a, Vector<T>>,
 {
     fn push(&mut self, value: T) -> Result<(), ()> {
-        Vector::<T>::push(self, value)
+        unsafe { Vector::<T>::push(self, value) }
     }
 
     fn append(&mut self, slice: &[T]) -> Result<(), ()> {
-        Vector::<T>::append(self, slice)
+        unsafe { Vector::<T>::append(self, slice) }
     }
 }
 

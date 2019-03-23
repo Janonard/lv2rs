@@ -10,6 +10,8 @@ pub type AtomString = ArrayAtomBody<(), i8>;
 impl AtomBody for AtomString {
     type InitializationParameter = ();
 
+    type MappedURIDs = uris::MappedURIDs;
+
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::STRING_TYPE_URI) }
     }
@@ -25,8 +27,11 @@ impl AtomBody for AtomString {
         Self::__initialize_body(writer, parameter)
     }
 
-    unsafe fn widen_ref(header: &AtomHeader) -> Result<&Atom<Self>, ()> {
-        Self::__widen_ref(header)
+    unsafe fn widen_ref<'a>(
+        header: &'a AtomHeader,
+        urids: &uris::MappedURIDs,
+    ) -> Result<&'a Atom<Self>, ()> {
+        Self::__widen_ref(header, urids)
     }
 }
 
@@ -47,13 +52,11 @@ pub trait AtomStringWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, Ato
             return Err(AtomStringWritingError::NotFirstCall);
         }
 
-        AtomString::append(self, unsafe {
-            std::mem::transmute::<&[u8], &[i8]>(string.to_bytes())
-        })
-        .map_err(|_| AtomStringWritingError::InsufficientSpace)?;
+        unsafe { AtomString::append(self, std::mem::transmute::<&[u8], &[i8]>(string.to_bytes())) }
+            .map_err(|_| AtomStringWritingError::InsufficientSpace)?;
 
         // Write the null terminator, as `string.as_bytes()` will never contain one.
-        AtomString::push(self, 0).map_err(|_| AtomStringWritingError::InsufficientSpace)
+        unsafe { AtomString::push(self, 0) }.map_err(|_| AtomStringWritingError::InsufficientSpace)
     }
 }
 

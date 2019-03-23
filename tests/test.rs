@@ -23,7 +23,7 @@ fn test_scalar() {
     out_port.write_atom(&42.0f32, &urids).unwrap();
 
     // Reading.
-    let atom = in_port.get_atom().unwrap();
+    let atom = in_port.get_atom(&urids).unwrap();
 
     // Asserting.
     assert_eq!(4, atom.body_size());
@@ -54,7 +54,7 @@ fn test_literal() {
         .is_ok());
 
     // Reading.
-    let atom = in_port.get_atom().unwrap();
+    let atom = in_port.get_atom(&urids).unwrap();
 
     // Asserting.
     assert_eq!(21, atom.body_size());
@@ -88,7 +88,7 @@ fn test_string() {
         .is_ok());
 
     // Reading.
-    let atom = in_port.get_atom().unwrap();
+    let atom = in_port.get_atom(&urids).unwrap();
 
     // Asserting.
     assert_eq!(13, atom.body_size());
@@ -119,7 +119,7 @@ fn test_vector() {
     }
 
     // Reading.
-    let atom = in_port.get_atom().unwrap();
+    let atom = in_port.get_atom(&urids).unwrap();
 
     // Asserting.
     assert_eq!(8 + 4 * 5, atom.body_size());
@@ -165,7 +165,7 @@ fn test_tuple() {
     }
 
     // Reading.
-    let atom = in_port.get_atom().unwrap();
+    let atom = in_port.get_atom(&urids).unwrap();
 
     // i32: AtomHeader, int, pad.
     let mut assumed_size = 8 + 4 + 4;
@@ -234,7 +234,7 @@ fn test_sequence() {
     }
 
     // Reading.
-    let atom = in_port.get_atom().unwrap();
+    let atom = in_port.get_atom(&urids).unwrap();
     let mut sequence_iter = atom.iter(&urids).unwrap();
 
     let (time_stamp, integer) = sequence_iter.next().unwrap();

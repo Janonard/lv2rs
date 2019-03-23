@@ -1,7 +1,7 @@
 use crate::atom::array::{ArrayAtomBody, ArrayAtomHeader};
 use crate::atom::{Atom, AtomBody, AtomHeader};
-use crate::chunk::*;
 use crate::frame::{NestedFrame, WritingFrame, WritingFrameExt};
+use crate::unknown::*;
 use crate::uris;
 use std::ffi::CStr;
 use urid::URID;
@@ -71,17 +71,17 @@ pub struct SequenceHeader {
 impl ArrayAtomHeader for SequenceHeader {
     type InitializationParameter = TimeUnit;
 
-    fn initialize<'a, W, T>(writer: &mut W, unit: &TimeUnit) -> Result<(), ()>
+    unsafe fn initialize<'a, W, T>(writer: &mut W, unit: &TimeUnit) -> Result<(), ()>
     where
         T: 'static + Sized + Copy,
         ArrayAtomBody<Self, T>: AtomBody,
         W: WritingFrame<'a> + WritingFrameExt<'a, ArrayAtomBody<Self, T>>,
     {
         let header = SequenceHeader {
-            unit: unit.into_urid(unsafe { uris::MappedURIDs::get_map() }),
+            unit: unit.into_urid(uris::MappedURIDs::get_map()),
             pad: 0,
         };
-        unsafe { writer.write_sized(&header) }.map(|_| ())
+        writer.write_sized(&header).map(|_| ())
     }
 }
 
@@ -89,6 +89,8 @@ pub type Sequence = ArrayAtomBody<SequenceHeader, u8>;
 
 impl AtomBody for Sequence {
     type InitializationParameter = TimeUnit;
+
+    type MappedURIDs = uris::MappedURIDs;
 
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::SEQUENCE_TYPE_URI) }
@@ -105,8 +107,11 @@ impl AtomBody for Sequence {
         Self::__initialize_body(writer, parameter)
     }
 
-    unsafe fn widen_ref(header: &AtomHeader) -> Result<&Atom<Self>, ()> {
-        Self::__widen_ref(header)
+    unsafe fn widen_ref<'a>(
+        header: &'a AtomHeader,
+        urids: &uris::MappedURIDs,
+    ) -> Result<&'a Atom<Self>, ()> {
+        Self::__widen_ref(header, urids)
     }
 }
 
@@ -114,12 +119,12 @@ impl Atom<Sequence> {
     pub fn iter<'a>(
         &'a self,
         urids: &uris::MappedURIDs,
-    ) -> Result<impl Iterator<Item = (TimeStamp, &'a Atom<Chunk>)>, ()> {
+    ) -> Result<impl Iterator<Item = (TimeStamp, &'a Atom<Unknown>)>, ()> {
         let time_unit = TimeUnit::try_from_urid(self.body.header.unit, urids)?;
         Ok(ChunkIterator::new(&self.body.data)
             .map(
-                move |(raw_stamp, chunk): (&'a RawTimeStamp, &'a Atom<Chunk>)|
-                    -> (TimeStamp, &'a Atom<Chunk>)
+                move |(raw_stamp, chunk): (&'a RawTimeStamp, &'a Atom<Unknown>)|
+                    -> (TimeStamp, &'a Atom<Unknown>)
                 {
                     let stamp = match time_unit {
                         TimeUnit::Frames => TimeStamp::Frames(unsafe {raw_stamp.frames}),
@@ -137,12 +142,13 @@ pub trait SequenceWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, Seque
         &'b mut self,
         time: TimeStamp,
         parameter: &A::InitializationParameter,
-        urids: &uris::MappedURIDs,
+        event_urids: &A::MappedURIDs,
     ) -> Result<NestedFrame<'b, 'a, A>, ()> {
         // Retrieving the time unit of the sequence.
+        let atom_urids = unsafe { uris::MappedURIDs::get_map() };
         let header_unit: TimeUnit = {
-            let atom = unsafe { self.get_atom() }.unwrap();
-            TimeUnit::try_from_urid(atom.body.header.unit, urids)
+            let atom = unsafe { self.get_atom(atom_urids) }.unwrap();
+            TimeUnit::try_from_urid(atom.body.header.unit, atom_urids)
                 .expect("Illegal time unit in atom sequence header")
         };
 
@@ -152,7 +158,7 @@ pub trait SequenceWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, Seque
 
         unsafe {
             self.write_sized(&RawTimeStamp::from(time.clone()))?;
-            let mut frame = self.create_atom_frame::<A>(urids)?;
+            let mut frame = self.create_atom_frame::<A>(event_urids)?;
             A::initialize_body(&mut frame, parameter)?;
             Ok(frame)
         }

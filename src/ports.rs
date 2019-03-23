@@ -1,6 +1,5 @@
 use crate::atom::*;
 use crate::frame::RootFrame;
-use crate::uris::MappedURIDs;
 use std::marker::PhantomData;
 use std::mem::size_of;
 use std::ptr::{null, null_mut};
@@ -26,7 +25,7 @@ impl<A: AtomBody + ?Sized> AtomOutputPort<A> {
     pub fn write_atom<'a>(
         &'a mut self,
         parameter: &A::InitializationParameter,
-        urids: &MappedURIDs,
+        urids: &A::MappedURIDs,
     ) -> Result<RootFrame<'a, A>, ()> {
         let header = match unsafe { self.atom.as_mut() } {
             Some(header) => header,
@@ -52,7 +51,7 @@ pub struct AtomInputPort<A: AtomBody + ?Sized> {
 }
 
 impl<A: AtomBody + ?Sized> AtomInputPort<A> {
-    pub fn new(urids: &MappedURIDs) -> Self {
+    pub fn new(urids: &A::MappedURIDs) -> Self {
         Self {
             atom: null(),
             type_urid: A::get_urid(urids),
@@ -64,7 +63,7 @@ impl<A: AtomBody + ?Sized> AtomInputPort<A> {
         self.atom = atom;
     }
 
-    pub fn get_atom(&self) -> Result<&Atom<A>, ()> {
+    pub fn get_atom(&self, urids: &A::MappedURIDs) -> Result<&Atom<A>, ()> {
         let atom = match unsafe { self.atom.as_ref() } {
             Some(atom) => atom,
             None => return Err(()),
@@ -72,6 +71,6 @@ impl<A: AtomBody + ?Sized> AtomInputPort<A> {
         if atom.atom_type != self.type_urid {
             return Err(());
         }
-        unsafe { A::widen_ref(atom) }
+        unsafe { A::widen_ref(atom, urids) }
     }
 }

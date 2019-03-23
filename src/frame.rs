@@ -1,5 +1,4 @@
 use crate::atom::{Atom, AtomBody, AtomHeader};
-use crate::uris::MappedURIDs;
 use std::marker::PhantomData;
 use std::mem::size_of;
 
@@ -51,7 +50,7 @@ pub trait WritingFrameExt<'a, A: AtomBody + ?Sized>: WritingFrame<'a> + Sized {
     /// Also, this function is unsafe since one can mess up atom structures.
     unsafe fn create_atom_frame<'b, C: AtomBody + ?Sized>(
         &'b mut self,
-        urids: &MappedURIDs,
+        urids: &C::MappedURIDs,
     ) -> Result<NestedFrame<'b, 'a, C>, ()> {
         let header = AtomHeader {
             size: 0,
@@ -67,8 +66,8 @@ pub trait WritingFrameExt<'a, A: AtomBody + ?Sized>: WritingFrame<'a> + Sized {
         Ok(writer)
     }
 
-    unsafe fn get_atom(&self) -> Result<&Atom<A>, ()> {
-        A::widen_ref(self.get_header())
+    unsafe fn get_atom<'b>(&'b self, urids: &A::MappedURIDs) -> Result<&'b Atom<A>, ()> {
+        A::widen_ref(self.get_header(), urids)
     }
 }
 
@@ -79,7 +78,7 @@ pub struct RootFrame<'a, A: AtomBody + ?Sized> {
 }
 
 impl<'a, A: AtomBody + ?Sized> RootFrame<'a, A> {
-    pub fn new(header: &'a mut AtomHeader, data: &'a mut [u8], urids: &MappedURIDs) -> Self {
+    pub fn new(header: &'a mut AtomHeader, data: &'a mut [u8], urids: &A::MappedURIDs) -> Self {
         header.atom_type = A::get_urid(urids);
         header.size = 0;
         RootFrame {

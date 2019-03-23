@@ -2,8 +2,8 @@ use crate::atom::{
     array::{ArrayAtomBody, ArrayAtomHeader},
     Atom, AtomBody, AtomHeader,
 };
-use crate::chunk::*;
 use crate::frame::{NestedFrame, WritingFrame, WritingFrameExt};
+use crate::unknown::*;
 use crate::uris;
 use std::ffi::CStr;
 use urid::URID;
@@ -23,7 +23,7 @@ pub struct ObjectHeader {
 impl ArrayAtomHeader for ObjectHeader {
     type InitializationParameter = (URID, URID);
 
-    fn initialize<'a, W, T>(writer: &mut W, (id, otype): &(URID, URID)) -> Result<(), ()>
+    unsafe fn initialize<'a, W, T>(writer: &mut W, (id, otype): &(URID, URID)) -> Result<(), ()>
     where
         T: 'static + Sized + Copy,
         ArrayAtomBody<Self, T>: AtomBody,
@@ -33,7 +33,7 @@ impl ArrayAtomHeader for ObjectHeader {
             id: *id,
             otype: *otype,
         };
-        unsafe { writer.write_sized(&header) }.map(|_| ())
+        writer.write_sized(&header).map(|_| ())
     }
 }
 
@@ -41,6 +41,8 @@ pub type Object = ArrayAtomBody<ObjectHeader, u8>;
 
 impl AtomBody for Object {
     type InitializationParameter = (URID, URID);
+
+    type MappedURIDs = uris::MappedURIDs;
 
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::OBJECT_TYPE_URI) }
@@ -57,13 +59,16 @@ impl AtomBody for Object {
         Self::__initialize_body(writer, &(*id, *otype))
     }
 
-    unsafe fn widen_ref(header: &AtomHeader) -> Result<&Atom<Self>, ()> {
-        Self::__widen_ref(header)
+    unsafe fn widen_ref<'a>(
+        header: &'a AtomHeader,
+        urids: &uris::MappedURIDs,
+    ) -> Result<&'a Atom<Self>, ()> {
+        Self::__widen_ref(header, urids)
     }
 }
 
 impl Atom<Object> {
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item = (&'a PropertyHeader, &'a Atom<Chunk>)> {
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = (&'a PropertyHeader, &'a Atom<Unknown>)> {
         ChunkIterator::<PropertyHeader>::new(&self.body.data)
     }
 }
@@ -73,7 +78,7 @@ pub trait ObjectWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, Object>
         &'b mut self,
         p_header: &PropertyHeader,
         parameter: &A::InitializationParameter,
-        urids: &uris::MappedURIDs,
+        urids: &A::MappedURIDs,
     ) -> Result<NestedFrame<'b, 'a, A>, ()> {
         unsafe {
             self.write_sized(p_header)?;

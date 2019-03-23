@@ -5,20 +5,22 @@ use std::ffi::CStr;
 use std::marker::PhantomData;
 use urid::URID;
 
-pub type Chunk = [u8];
+pub type Unknown = [u8];
 
-impl Atom<Chunk> {
-    pub fn cast<A: AtomBody + ?Sized>(&self, urids: &uris::MappedURIDs) -> Result<&Atom<A>, ()> {
+impl Atom<Unknown> {
+    pub fn cast<A: AtomBody + ?Sized>(&self, urids: &A::MappedURIDs) -> Result<&Atom<A>, ()> {
         if self.header.atom_type == A::get_urid(urids) {
-            unsafe { A::widen_ref(&self.header) }
+            unsafe { A::widen_ref(&self.header, urids) }
         } else {
             Err(())
         }
     }
 }
 
-impl AtomBody for Chunk {
+impl AtomBody for Unknown {
     type InitializationParameter = [u8];
+
+    type MappedURIDs = uris::MappedURIDs;
 
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::CHUNK_TYPE_URI) }
@@ -35,7 +37,10 @@ impl AtomBody for Chunk {
         writer.write_raw(data).map(|_| ())
     }
 
-    unsafe fn widen_ref(header: &AtomHeader) -> Result<&Atom<Self>, ()> {
+    unsafe fn widen_ref<'a>(
+        header: &'a AtomHeader,
+        _urids: &uris::MappedURIDs,
+    ) -> Result<&'a Atom<Self>, ()> {
         let size = header.size as usize;
 
         // This is were the unsafe things happen!
@@ -65,9 +70,9 @@ impl<'a, H: 'static + Sized> ChunkIterator<'a, H> {
 }
 
 impl<'a, H: 'static + Sized> Iterator for ChunkIterator<'a, H> {
-    type Item = (&'a H, &'a Atom<Chunk>);
+    type Item = (&'a H, &'a Atom<Unknown>);
 
-    fn next(&mut self) -> Option<(&'a H, &'a Atom<Chunk>)> {
+    fn next(&mut self) -> Option<(&'a H, &'a Atom<Unknown>)> {
         use std::mem::size_of;
 
         if self.position >= self.data.len() {
@@ -82,7 +87,7 @@ impl<'a, H: 'static + Sized> Iterator for ChunkIterator<'a, H> {
         let pre_header = unsafe { (data.as_ptr() as *const H).as_ref() }?;
         let data = &data[size_of::<H>()..];
         let header = unsafe { (data.as_ptr() as *const AtomHeader).as_ref() }?;
-        let chunk = match unsafe { Chunk::widen_ref(header) } {
+        let chunk = match unsafe { Unknown::widen_ref(header, uris::MappedURIDs::get_map()) } {
             Ok(chunk) => chunk,
             Err(_) => return None,
         };

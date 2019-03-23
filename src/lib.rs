@@ -1,11 +1,16 @@
+//! A rust re-implementation of the LV2 atom library.
+//!
+//! The purpose of this crate is to provide safe, idiomatic and easy-to-use means to use the type
+//! system introduced by the LV2 atom library. This type system is (relatively) portable and can be
+//! used to exchange information of arbitrary type among LV2 plugins.
+//!
 //! ## What are atoms?
 //!
-//! The general idea of atoms is to have a portable type system that can be used to exchange
-//! information between different plugins. On an abstract level, every atom has a header which
-//! contains the URID of the atom type and a size in bytes. Behind the header, there is a chunk of
-//! memory with the specified size. Since this data is supposed to be "plain old data" and
-//! therefore must not contain references to other objects, the host does not need to "understand"
-//! the atoms; It simply copies the data.
+//! On an abstract level, every atom consist of a header, which contains the URID of the atom type
+//! and a size in bytes, and body, a chunk of memory with the specified size. The interpretation of
+//! this body is dependent on the atom type and one of the features of this crate. Since this data is
+//! supposed to be "plain old data" and therefore must not contain references to other objects,
+//! the host does not need to "understand" the atoms; It simply copies the data.
 //!
 //! There are several types of atoms which can be used to express almost any data:
 //!
@@ -60,7 +65,6 @@ extern crate lv2rs_core as core;
 extern crate lv2rs_urid as urid;
 
 pub mod atom;
-pub mod chunk;
 pub mod frame;
 pub mod literal;
 pub mod object;
@@ -69,9 +73,11 @@ pub mod scalar;
 pub mod sequence;
 pub mod string;
 pub mod tuple;
+pub mod unknown;
 pub mod uris;
 pub mod vector;
 
+/// Re-exportation module that contains all traits necessary to use lv2rs-atom.
 pub mod prelude {
     pub use crate::atom::{Atom, AtomBody, AtomHeader};
     pub use crate::frame::{WritingFrame, WritingFrameExt};
@@ -79,8 +85,8 @@ pub mod prelude {
 
     // Atom bodies.
     pub use crate::{
-        chunk::Chunk, literal::Literal, object::Object, sequence::Sequence, string::AtomString,
-        tuple::Tuple, vector::Vector,
+        literal::Literal, object::Object, sequence::Sequence, string::AtomString, tuple::Tuple,
+        unknown::Unknown, vector::Vector,
     };
 
     // Writing frame extensions

@@ -19,7 +19,7 @@ pub type Literal = ArrayAtomBody<LiteralHeader, u8>;
 impl ArrayAtomHeader for LiteralHeader {
     type InitializationParameter = URID;
 
-    fn initialize<'a, W, T>(writer: &mut W, language: &URID) -> Result<(), ()>
+    unsafe fn initialize<'a, W, T>(writer: &mut W, language: &URID) -> Result<(), ()>
     where
         T: 'static + Sized + Copy,
         ArrayAtomBody<Self, T>: AtomBody,
@@ -29,13 +29,15 @@ impl ArrayAtomHeader for LiteralHeader {
             datatype: 0,
             lang: *language,
         };
-        unsafe { writer.write_sized(&header)? };
+        writer.write_sized(&header)?;
         Ok(())
     }
 }
 
 impl AtomBody for Literal {
     type InitializationParameter = URID;
+
+    type MappedURIDs = uris::MappedURIDs;
 
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::LITERAL_TYPE_URI) }
@@ -52,8 +54,11 @@ impl AtomBody for Literal {
         Self::__initialize_body(writer, language)
     }
 
-    unsafe fn widen_ref(header: &AtomHeader) -> Result<&Atom<Self>, ()> {
-        Self::__widen_ref(header)
+    unsafe fn widen_ref<'a>(
+        header: &'a AtomHeader,
+        urids: &uris::MappedURIDs,
+    ) -> Result<&'a Atom<Self>, ()> {
+        Self::__widen_ref(header, urids)
     }
 }
 
@@ -81,11 +86,11 @@ pub trait LiteralWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, Litera
             return Err(LiteralWritingError::NotFirstCall);
         }
 
-        Literal::append(self, string.as_bytes())
+        unsafe { Literal::append(self, string.as_bytes()) }
             .map_err(|_| LiteralWritingError::InsufficientSpace)?;
 
         // Write the null terminator, as `string.as_bytes()` will never contain one.
-        Literal::push(self, 0).map_err(|_| LiteralWritingError::InsufficientSpace)
+        unsafe { Literal::push(self, 0) }.map_err(|_| LiteralWritingError::InsufficientSpace)
     }
 }
 

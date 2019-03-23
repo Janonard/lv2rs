@@ -15,6 +15,8 @@ where
 {
     type InitializationParameter = Self;
 
+    type MappedURIDs = uris::MappedURIDs;
+
     fn get_uri() -> &'static CStr {
         T::get_uri()
     }
@@ -31,8 +33,13 @@ where
         Ok(())
     }
 
-    unsafe fn widen_ref(header: &AtomHeader) -> Result<&Atom<Self>, ()> {
-        if header.size as usize == std::mem::size_of::<Self>() {
+    unsafe fn widen_ref<'a>(
+        header: &'a AtomHeader,
+        urids: &uris::MappedURIDs,
+    ) -> Result<&'a Atom<Self>, ()> {
+        if header.atom_type == T::get_urid(urids)
+            && header.size as usize == std::mem::size_of::<Self>()
+        {
             Ok((header as *const AtomHeader as *const Atom<Self>)
                 .as_ref()
                 .unwrap())
