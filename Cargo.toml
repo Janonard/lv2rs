@@ -10,5 +10,6 @@ description = "Rust re-implementation of the LV2 libraries"
 edition = "2018"
 
 [dependencies]
-lv2rs-core = "0.2.0"
-lv2rs-urid = "0.1.0"
+lv2rs-core = { git = "https://github.com/Janonard/lv2rs-core.git" }
+lv2rs-urid = { git = "https://github.com/Janonard/lv2rs-urid.git" }
+lv2rs-atom = { git = "https://github.com/Janonard/lv2rs-atom.git" }
