@@ -45,6 +45,7 @@
 //!     }
 extern crate lv2rs_core as core;
 
+pub mod debug;
 pub mod uris;
 
 use std::collections::HashMap;
