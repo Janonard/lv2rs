@@ -67,6 +67,9 @@ use crate::uris;
 use std::ffi::CStr;
 use urid::URID;
 
+/// ASCII String.
+///
+/// See the [module documentation](index.html) for more information.
 pub type AtomString = ArrayAtomBody<(), i8>;
 
 impl AtomBody for AtomString {
@@ -104,6 +107,9 @@ impl AtomBody for AtomString {
 }
 
 impl Atom<AtomString> {
+    /// Try to wrap the string into a `CStr` reference.
+    ///
+    /// This function returns an error if the internal conversion fails.
     pub fn as_cstr(&self) -> Result<&CStr, std::ffi::FromBytesWithNulError> {
         CStr::from_bytes_with_nul(unsafe { std::mem::transmute::<&[i8], &[u8]>(&self.body.data) })
     }
