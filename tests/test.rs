@@ -80,12 +80,9 @@ fn test_string() {
     let mut in_port: AtomInputPort<AtomString> = AtomInputPort::new(&urids);
     in_port.connect_port(atom as &AtomHeader);
 
+    let message = CStr::from_bytes_with_nul(b"Hello World!\0").unwrap();
     // Writing.
-    assert!(out_port
-        .write_atom(&(), &urids)
-        .unwrap()
-        .write_string(CStr::from_bytes_with_nul(b"Hello World!\0").unwrap())
-        .is_ok());
+    out_port.write_atom(message, &urids).unwrap();
 
     // Reading.
     let atom = in_port.get_atom(&urids).unwrap();

@@ -92,6 +92,6 @@ pub mod prelude {
     // Writing frame extensions
     pub use crate::{
         literal::LiteralWritingFrame, object::ObjectWritingFrame, sequence::SequenceWritingFrame,
-        string::AtomStringWritingFrame, tuple::TupleWritingFrame, vector::VectorWritingFrame,
+        tuple::TupleWritingFrame, vector::VectorWritingFrame,
     };
 }
