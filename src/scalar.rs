@@ -15,37 +15,39 @@
 //! [`AtomBody`](../atom/trait.AtomBody.html) for every type that implements it. Therefore, writing
 //! and reading scalar atoms is pretty straight foreward:
 //!
-//!     extern crate lv2rs_atom;
-//!     use lv2rs_atom::prelude::*;
-//!     use lv2rs_atom::uris::MappedURIDs;
-//!     use lv2rs_atom::ports::*;
+//!     extern crate lv2rs_atom as atom;
+//!     extern crate lv2rs_urid as urid;
+//!     
+//!     use atom::prelude::*;
+//!     use atom::ports::*;
+//!     use urid::{CachedMap, debug::DebugMap};
+//!     use std::ffi::CStr;
 //!
 //!     pub struct Plugin {
 //!         in_port: AtomInputPort<f32>,
 //!         out_port: AtomOutputPort<f32>,
-//!         urids: &'static MappedURIDs,
+//!         urids: CachedMap,
 //!     }
 //!
 //!     impl Plugin {
 //!         /// Simulated `run` method.
 //!         fn run(&mut self) {
 //!             // Writing.
-//!             self.out_port.write_atom(&42.0f32, self.urids).unwrap();
+//!             self.out_port.write_atom(&42.0f32, &mut self.urids).unwrap();
 //!
 //!             // Reading.
-//!             let atom = self.in_port.get_atom(self.urids).unwrap();
-//!             assert_eq!(4, atom.body_size());
-//!             assert_eq!(self.urids.float, atom.body_type());
+//!             let atom = self.in_port.get_atom(&mut self.urids).unwrap();
 //!             assert_eq!(42.0, **atom);
 //!         }
 //!     }
 //!
-//!     // Getting the default URID map.
-//!     let urids = unsafe {MappedURIDs::get_map()};
+//!     // Getting a debug URID map.
+//!     let mut debug_map = DebugMap::new();
+//!     let mut urids = unsafe {debug_map.create_cached_map()};
 //!
 //!     // Creating the plugin.
 //!     let mut plugin = Plugin {
-//!         in_port: AtomInputPort::new(urids),
+//!         in_port: AtomInputPort::new(&mut urids),
 //!         out_port: AtomOutputPort::new(),
 //!         urids: urids,
 //!     };
@@ -71,7 +73,6 @@ use std::ffi::CStr;
 /// See the [module documentation](index.html) for more information.
 pub trait ScalarAtomBody {
     fn get_uri() -> &'static CStr;
-    fn get_urid(urids: &uris::MappedURIDs) -> URID;
 }
 
 impl<T> AtomBody for T
@@ -80,17 +81,15 @@ where
 {
     type InitializationParameter = Self;
 
-    type MappedURIDs = uris::MappedURIDs;
-
     fn get_uri() -> &'static CStr {
         T::get_uri()
     }
 
-    fn get_urid(urids: &uris::MappedURIDs) -> URID {
-        T::get_urid(urids)
-    }
-
-    unsafe fn initialize_body<'a, W>(writer: &mut W, parameter: &Self) -> Result<(), ()>
+    unsafe fn initialize_body<'a, W>(
+        writer: &mut W,
+        parameter: &Self,
+        _urids: &mut urid::CachedMap,
+    ) -> Result<(), ()>
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
     {
@@ -100,9 +99,9 @@ where
 
     unsafe fn widen_ref<'a>(
         header: &'a AtomHeader,
-        urids: &uris::MappedURIDs,
+        urids: &mut urid::CachedMap,
     ) -> Result<&'a Atom<Self>, ()> {
-        if header.atom_type == T::get_urid(urids)
+        if header.atom_type == urids.map(T::get_uri())
             && header.size as usize == std::mem::size_of::<Self>()
         {
             Ok((header as *const AtomHeader as *const Atom<Self>)
@@ -120,10 +119,6 @@ impl ScalarAtomBody for c_int {
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::INT_TYPE_URI) }
     }
-
-    fn get_urid(urids: &uris::MappedURIDs) -> URID {
-        urids.int
-    }
 }
 
 pub use std::os::raw::c_long;
@@ -131,10 +126,6 @@ pub use std::os::raw::c_long;
 impl ScalarAtomBody for c_long {
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::LONG_TYPE_URI) }
-    }
-
-    fn get_urid(urids: &uris::MappedURIDs) -> URID {
-        urids.long
     }
 }
 
@@ -144,10 +135,6 @@ impl ScalarAtomBody for c_float {
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::FLOAT_TYPE_URI) }
     }
-
-    fn get_urid(urids: &uris::MappedURIDs) -> URID {
-        urids.float
-    }
 }
 
 pub use std::os::raw::c_double;
@@ -155,10 +142,6 @@ pub use std::os::raw::c_double;
 impl ScalarAtomBody for c_double {
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::DOUBLE_TYPE_URI) }
-    }
-
-    fn get_urid(urids: &uris::MappedURIDs) -> URID {
-        urids.double
     }
 }
 
@@ -168,18 +151,10 @@ impl ScalarAtomBody for URID {
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::URID_TYPE_URI) }
     }
-
-    fn get_urid(urids: &uris::MappedURIDs) -> URID {
-        urids.urid
-    }
 }
 
 impl ScalarAtomBody for bool {
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::BOOL_TYPE_URI) }
-    }
-
-    fn get_urid(urids: &uris::MappedURIDs) -> URID {
-        urids.bool
     }
 }

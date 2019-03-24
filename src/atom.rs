@@ -26,7 +26,7 @@ impl AtomHeader {
     /// actually allocated. Therefore, this method could have undefined behaviour.
     pub unsafe fn widen_ref<A: AtomBody + ?Sized>(
         &self,
-        urids: &A::MappedURIDs,
+        urids: &mut urid::CachedMap,
     ) -> Result<&Atom<A>, ()> {
         A::widen_ref(self, urids)
     }
@@ -53,14 +53,8 @@ pub trait AtomBody {
     /// unsized types in here, like slices.
     type InitializationParameter: ?Sized;
 
-    /// A struct type that contains the URID of this atom.
-    type MappedURIDs;
-
     /// Return the URI of the atom type.
     fn get_uri() -> &'static CStr;
-
-    /// Return the URID of the atom type.
-    fn get_urid(urids: &Self::MappedURIDs) -> URID;
 
     /// Write out a basic but valid atom body.
     ///
@@ -82,6 +76,7 @@ pub trait AtomBody {
     unsafe fn initialize_body<'a, W>(
         writer: &mut W,
         parameter: &Self::InitializationParameter,
+        urids: &mut urid::CachedMap,
     ) -> Result<(), ()>
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>;
@@ -98,7 +93,7 @@ pub trait AtomBody {
     /// opposite.
     unsafe fn widen_ref<'a>(
         header: &'a AtomHeader,
-        urids: &Self::MappedURIDs,
+        urids: &mut urid::CachedMap,
     ) -> Result<&'a Atom<Self>, ()>;
 }
 
@@ -173,6 +168,7 @@ pub mod array {
         unsafe fn initialize<'a, W, T>(
             writer: &mut W,
             parameter: &Self::InitializationParameter,
+            urids: &mut urid::CachedMap,
         ) -> Result<(), ()>
         where
             T: 'static + Sized + Copy,
@@ -183,7 +179,7 @@ pub mod array {
     impl ArrayAtomHeader for () {
         type InitializationParameter = ();
 
-        unsafe fn initialize<'a, W, T>(_: &mut W, _: &()) -> Result<(), ()>
+        unsafe fn initialize<'a, W, T>(_: &mut W, _: &(), _: &mut urid::CachedMap) -> Result<(), ()>
         where
             T: 'static + Sized + Copy,
             ArrayAtomBody<Self, T>: AtomBody,
@@ -226,11 +222,12 @@ pub mod array {
         pub unsafe fn __initialize_body<'a, W>(
             writer: &mut W,
             parameter: &H::InitializationParameter,
+            urids: &mut urid::CachedMap,
         ) -> Result<(), ()>
         where
             W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
         {
-            H::initialize(writer, parameter)
+            H::initialize(writer, parameter, urids)
         }
 
         /// Internal method to widen an atom header reference.
@@ -243,9 +240,9 @@ pub mod array {
         /// element.
         pub unsafe fn __widen_ref<'a>(
             header: &'a AtomHeader,
-            urids: &<Self as AtomBody>::MappedURIDs,
+            urids: &mut urid::CachedMap,
         ) -> Result<&'a Atom<Self>, ()> {
-            if header.atom_type != Self::get_urid(urids) {
+            if header.atom_type != urids.map(Self::get_uri()) {
                 return Err(());
             }
 

@@ -74,11 +74,11 @@ pub trait WritingFrameExt<'a, A: AtomBody + ?Sized>: WritingFrame<'a> + Sized {
     /// Also, this function is unsafe since one can mess up atom structures.
     unsafe fn create_nested_frame<'b, C: AtomBody + ?Sized>(
         &'b mut self,
-        urids: &C::MappedURIDs,
+        urids: &mut urid::CachedMap,
     ) -> Result<NestedFrame<'b, 'a, C>, ()> {
         let header = AtomHeader {
             size: 0,
-            atom_type: C::get_urid(urids),
+            atom_type: urids.map(C::get_uri()),
         };
         let header = self.write_sized(&header)?;
         let writer = NestedFrame {
@@ -93,7 +93,7 @@ pub trait WritingFrameExt<'a, A: AtomBody + ?Sized>: WritingFrame<'a> + Sized {
     /// Try to widen the atom header reference to an atom reference.
     ///
     /// This is just a shortcut for `A::widen_ref(frame.get_header(), urids)`.
-    unsafe fn get_atom<'b>(&'b self, urids: &A::MappedURIDs) -> Result<&'b Atom<A>, ()> {
+    unsafe fn get_atom<'b>(&'b self, urids: &mut urid::CachedMap) -> Result<&'b Atom<A>, ()> {
         A::widen_ref(self.get_header(), urids)
     }
 }
@@ -117,7 +117,7 @@ impl<'a, A: AtomBody + ?Sized> RootFrame<'a, A> {
     /// beginning of the slice and create the frame.
     ///
     /// If the slice is not big enough to hold the atom header, this function returns an `Err`.
-    pub fn new(free_space: &'a mut [u8], urids: &A::MappedURIDs) -> Result<Self, ()> {
+    pub fn new(free_space: &'a mut [u8], urids: &mut urid::CachedMap) -> Result<Self, ()> {
         let header_size = std::mem::size_of::<AtomHeader>();
         if free_space.len() < header_size {
             return Err(());
@@ -132,7 +132,7 @@ impl<'a, A: AtomBody + ?Sized> RootFrame<'a, A> {
             )
         };
 
-        header.atom_type = A::get_urid(urids);
+        header.atom_type = urids.map(A::get_uri());
         header.size = 0;
         Ok(RootFrame {
             header: header,

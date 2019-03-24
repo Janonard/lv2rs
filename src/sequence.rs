@@ -13,20 +13,26 @@ pub enum TimeUnit {
 }
 
 impl TimeUnit {
-    pub fn try_from_urid(urid: URID, mapped_urids: &uris::MappedURIDs) -> Result<TimeUnit, ()> {
-        if urid == mapped_urids.beat_time {
+    pub fn try_from_urid(urid: URID, urids: &mut urid::CachedMap) -> Result<TimeUnit, ()> {
+        if urid == urids.map(unsafe { CStr::from_bytes_with_nul_unchecked(uris::BEAT_TIME_URI) }) {
             Ok(TimeUnit::Beats)
-        } else if urid == mapped_urids.frame_time {
+        } else if urid
+            == urids.map(unsafe { CStr::from_bytes_with_nul_unchecked(uris::FRAME_TIME_URI) })
+        {
             Ok(TimeUnit::Frames)
         } else {
             Err(())
         }
     }
 
-    pub fn into_urid(&self, mapped_urids: &uris::MappedURIDs) -> URID {
+    pub fn into_urid(&self, urids: &mut urid::CachedMap) -> URID {
         match self {
-            TimeUnit::Frames => mapped_urids.frame_time,
-            TimeUnit::Beats => mapped_urids.beat_time,
+            TimeUnit::Frames => {
+                urids.map(unsafe { CStr::from_bytes_with_nul_unchecked(uris::FRAME_TIME_URI) })
+            }
+            TimeUnit::Beats => {
+                urids.map(unsafe { CStr::from_bytes_with_nul_unchecked(uris::BEAT_TIME_URI) })
+            }
         }
     }
 }
@@ -71,14 +77,18 @@ pub struct SequenceHeader {
 impl ArrayAtomHeader for SequenceHeader {
     type InitializationParameter = TimeUnit;
 
-    unsafe fn initialize<'a, W, T>(writer: &mut W, unit: &TimeUnit) -> Result<(), ()>
+    unsafe fn initialize<'a, W, T>(
+        writer: &mut W,
+        unit: &TimeUnit,
+        urids: &mut urid::CachedMap,
+    ) -> Result<(), ()>
     where
         T: 'static + Sized + Copy,
         ArrayAtomBody<Self, T>: AtomBody,
         W: WritingFrame<'a> + WritingFrameExt<'a, ArrayAtomBody<Self, T>>,
     {
         let header = SequenceHeader {
-            unit: unit.into_urid(uris::MappedURIDs::get_map()),
+            unit: unit.into_urid(urids),
             pad: 0,
         };
         writer.write_sized(&header).map(|_| ())
@@ -90,26 +100,24 @@ pub type Sequence = ArrayAtomBody<SequenceHeader, u8>;
 impl AtomBody for Sequence {
     type InitializationParameter = TimeUnit;
 
-    type MappedURIDs = uris::MappedURIDs;
-
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::SEQUENCE_TYPE_URI) }
     }
 
-    fn get_urid(urids: &uris::MappedURIDs) -> URID {
-        urids.sequence
-    }
-
-    unsafe fn initialize_body<'a, W>(writer: &mut W, parameter: &TimeUnit) -> Result<(), ()>
+    unsafe fn initialize_body<'a, W>(
+        writer: &mut W,
+        parameter: &TimeUnit,
+        urids: &mut urid::CachedMap,
+    ) -> Result<(), ()>
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
     {
-        Self::__initialize_body(writer, parameter)
+        Self::__initialize_body(writer, parameter, urids)
     }
 
     unsafe fn widen_ref<'a>(
         header: &'a AtomHeader,
-        urids: &uris::MappedURIDs,
+        urids: &mut urid::CachedMap,
     ) -> Result<&'a Atom<Self>, ()> {
         Self::__widen_ref(header, urids)
     }
@@ -118,7 +126,7 @@ impl AtomBody for Sequence {
 impl Atom<Sequence> {
     pub fn iter<'a>(
         &'a self,
-        urids: &uris::MappedURIDs,
+        urids: &mut urid::CachedMap,
     ) -> Result<impl Iterator<Item = (TimeStamp, &'a Atom<Unknown>)>, ()> {
         let time_unit = TimeUnit::try_from_urid(self.body.header.unit, urids)?;
         Ok(ChunkIterator::new(&self.body.data)
@@ -142,13 +150,12 @@ pub trait SequenceWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, Seque
         &'b mut self,
         time: TimeStamp,
         parameter: &A::InitializationParameter,
-        event_urids: &A::MappedURIDs,
+        urids: &mut urid::CachedMap,
     ) -> Result<NestedFrame<'b, 'a, A>, ()> {
         // Retrieving the time unit of the sequence.
-        let atom_urids = unsafe { uris::MappedURIDs::get_map() };
         let header_unit: TimeUnit = {
-            let atom = unsafe { self.get_atom(atom_urids) }.unwrap();
-            TimeUnit::try_from_urid(atom.body.header.unit, atom_urids)
+            let atom = unsafe { self.get_atom(urids) }.unwrap();
+            TimeUnit::try_from_urid(atom.body.header.unit, urids)
                 .expect("Illegal time unit in atom sequence header")
         };
 
@@ -158,8 +165,8 @@ pub trait SequenceWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, Seque
 
         unsafe {
             self.write_sized(&RawTimeStamp::from(time.clone()))?;
-            let mut frame = self.create_nested_frame::<A>(event_urids)?;
-            A::initialize_body(&mut frame, parameter)?;
+            let mut frame = self.create_nested_frame::<A>(urids)?;
+            A::initialize_body(&mut frame, parameter, urids)?;
             Ok(frame)
         }
     }

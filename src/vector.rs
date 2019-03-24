@@ -17,15 +17,18 @@
 //!
 //! An example:
 //!
-//!     extern crate lv2rs_atom;
-//!     use lv2rs_atom::prelude::*;
-//!     use lv2rs_atom::uris::MappedURIDs;
-//!     use lv2rs_atom::ports::*;
+//!     extern crate lv2rs_atom as atom;
+//!     extern crate lv2rs_urid as urid;
+//!     
+//!     use atom::prelude::*;
+//!     use atom::ports::*;
+//!     use urid::{CachedMap, debug::DebugMap};
+//!     use std::ffi::CStr;
 //!
 //!     pub struct Plugin {
 //!         in_port: AtomInputPort<Vector<f32>>,
 //!         out_port: AtomOutputPort<Vector<f32>>,
-//!         urids: &'static MappedURIDs,
+//!         urids: CachedMap,
 //!     }
 //!
 //!     impl Plugin {
@@ -33,24 +36,25 @@
 //!         fn run(&mut self) {
 //!             // Writing
 //!             {
-//!                 let mut frame = self.out_port.write_atom(self.urids, self.urids).unwrap();
+//!                 let mut frame = self.out_port.write_atom(&(), &mut self.urids).unwrap();
 //!                 frame.push(0.0).unwrap();
 //!                 frame.append(&[1.0, 2.0, 3.0, 4.0]).unwrap();
 //!             }
 //!
 //!             // Reading.
-//!             let atom = self.in_port.get_atom(self.urids).unwrap();
+//!             let atom = self.in_port.get_atom(&mut self.urids).unwrap();
 //!             let data = atom.as_slice();
 //!             assert_eq!([0.0, 1.0, 2.0, 3.0, 4.0], data);
 //!         }
 //!     }
 //!
-//!     // Getting the default URID map.
-//!     let urids = unsafe {MappedURIDs::get_map()};
+//!     // Getting a debug URID map.
+//!     let mut debug_map = DebugMap::new();
+//!     let mut urids = unsafe {debug_map.create_cached_map()};
 //!
 //!     // Creating the plugin.
 //!     let mut plugin = Plugin {
-//!         in_port: AtomInputPort::new(urids),
+//!         in_port: AtomInputPort::new(&mut urids),
 //!         out_port: AtomOutputPort::new(),
 //!         urids: urids,
 //!     };
@@ -93,7 +97,11 @@ pub type Vector<T> = ArrayAtomBody<VectorHeader, T>;
 impl ArrayAtomHeader for VectorHeader {
     type InitializationParameter = URID;
 
-    unsafe fn initialize<'a, W, T>(writer: &mut W, child_type: &URID) -> Result<(), ()>
+    unsafe fn initialize<'a, W, T>(
+        writer: &mut W,
+        child_type: &URID,
+        _urids: &mut urid::CachedMap,
+    ) -> Result<(), ()>
     where
         T: 'static + Sized + Copy,
         ArrayAtomBody<Self, T>: AtomBody,
@@ -112,28 +120,26 @@ impl<T> AtomBody for Vector<T>
 where
     T: 'static + AtomBody + Sized + Copy,
 {
-    type InitializationParameter = T::MappedURIDs;
-
-    type MappedURIDs = uris::MappedURIDs;
+    type InitializationParameter = ();
 
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::VECTOR_TYPE_URI) }
     }
 
-    fn get_urid(urids: &Self::MappedURIDs) -> URID {
-        urids.vector
-    }
-
-    unsafe fn initialize_body<'a, W>(writer: &mut W, urids: &T::MappedURIDs) -> Result<(), ()>
+    unsafe fn initialize_body<'a, W>(
+        writer: &mut W,
+        _: &(),
+        urids: &mut urid::CachedMap,
+    ) -> Result<(), ()>
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
     {
-        Self::__initialize_body(writer, &T::get_urid(urids))
+        Self::__initialize_body(writer, &urids.map(T::get_uri()), urids)
     }
 
     unsafe fn widen_ref<'a>(
         header: &'a AtomHeader,
-        urids: &uris::MappedURIDs,
+        urids: &mut urid::CachedMap,
     ) -> Result<&'a Atom<Self>, ()> {
         Self::__widen_ref(header, urids)
     }

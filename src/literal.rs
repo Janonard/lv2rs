@@ -19,7 +19,11 @@ pub type Literal = ArrayAtomBody<LiteralHeader, u8>;
 impl ArrayAtomHeader for LiteralHeader {
     type InitializationParameter = URID;
 
-    unsafe fn initialize<'a, W, T>(writer: &mut W, language: &URID) -> Result<(), ()>
+    unsafe fn initialize<'a, W, T>(
+        writer: &mut W,
+        language: &URID,
+        _urids: &mut urid::CachedMap,
+    ) -> Result<(), ()>
     where
         T: 'static + Sized + Copy,
         ArrayAtomBody<Self, T>: AtomBody,
@@ -37,26 +41,24 @@ impl ArrayAtomHeader for LiteralHeader {
 impl AtomBody for Literal {
     type InitializationParameter = URID;
 
-    type MappedURIDs = uris::MappedURIDs;
-
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::LITERAL_TYPE_URI) }
     }
 
-    fn get_urid(urids: &uris::MappedURIDs) -> URID {
-        urids.literal
-    }
-
-    unsafe fn initialize_body<'a, W>(writer: &mut W, language: &URID) -> Result<(), ()>
+    unsafe fn initialize_body<'a, W>(
+        writer: &mut W,
+        language: &URID,
+        urids: &mut urid::CachedMap,
+    ) -> Result<(), ()>
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
     {
-        Self::__initialize_body(writer, language)
+        Self::__initialize_body(writer, language, urids)
     }
 
     unsafe fn widen_ref<'a>(
         header: &'a AtomHeader,
-        urids: &uris::MappedURIDs,
+        urids: &mut urid::CachedMap,
     ) -> Result<&'a Atom<Self>, ()> {
         Self::__widen_ref(header, urids)
     }

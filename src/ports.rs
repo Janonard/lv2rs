@@ -24,7 +24,7 @@ impl<A: AtomBody + ?Sized> AtomOutputPort<A> {
     pub fn write_atom<'a>(
         &'a mut self,
         parameter: &A::InitializationParameter,
-        urids: &A::MappedURIDs,
+        urids: &mut urid::CachedMap,
     ) -> Result<RootFrame<'a, A>, ()> {
         let header = match unsafe { self.atom.as_mut() } {
             Some(header) => header,
@@ -33,7 +33,7 @@ impl<A: AtomBody + ?Sized> AtomOutputPort<A> {
         let data =
             unsafe { std::slice::from_raw_parts_mut(self.atom as *mut u8, header.size as usize) };
         let mut frame = RootFrame::new(data, urids)?;
-        unsafe { A::initialize_body(&mut frame, parameter)? };
+        unsafe { A::initialize_body(&mut frame, parameter, urids)? };
         Ok(frame)
     }
 }
@@ -45,10 +45,10 @@ pub struct AtomInputPort<A: AtomBody + ?Sized> {
 }
 
 impl<A: AtomBody + ?Sized> AtomInputPort<A> {
-    pub fn new(urids: &A::MappedURIDs) -> Self {
+    pub fn new(urids: &mut urid::CachedMap) -> Self {
         Self {
             atom: null(),
-            type_urid: A::get_urid(urids),
+            type_urid: urids.map(A::get_uri()),
             phantom: PhantomData,
         }
     }
@@ -57,7 +57,7 @@ impl<A: AtomBody + ?Sized> AtomInputPort<A> {
         self.atom = atom;
     }
 
-    pub fn get_atom(&self, urids: &A::MappedURIDs) -> Result<&Atom<A>, ()> {
+    pub fn get_atom(&self, urids: &mut urid::CachedMap) -> Result<&Atom<A>, ()> {
         let atom = match unsafe { self.atom.as_ref() } {
             Some(atom) => atom,
             None => return Err(()),
