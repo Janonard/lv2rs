@@ -135,7 +135,7 @@ impl Unmap {
 /// Cached version of [Map](struct.Map.html)
 pub struct CachedMap {
     raw: &'static mut Map,
-    cache: HashMap<CString, URID>,
+    cache: HashMap<&'static CStr, URID>,
 }
 
 impl CachedMap {
@@ -156,7 +156,7 @@ impl CachedMap {
     }
 
     /// Return a reference to the cache.
-    pub fn cache(&self) -> &HashMap<CString, URID> {
+    pub fn cache(&self) -> &HashMap<&'static CStr, URID> {
         &self.cache
     }
 
@@ -164,13 +164,9 @@ impl CachedMap {
     ///
     /// The same rules from [Map.map](struct.Map.html#method.map) apply. Additionally, this function
     /// will cache the mappings and short-cut if a requested mapping is already cached.
-    pub fn map<S>(&mut self, uri: S) -> URID
-    where
-        CString: From<S>,
-    {
-        let uri = CString::from(uri);
+    pub fn map(&mut self, uri: &'static CStr) -> URID {
         if !self.cache.contains_key(&uri) {
-            let urid = self.raw.map(uri.as_c_str());
+            let urid = self.raw.map(uri);
             self.cache.insert(uri.clone(), urid);
         }
         *(self.cache.get(&uri).unwrap())
