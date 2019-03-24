@@ -14,7 +14,7 @@ impl Plugin for ExAmp {
         _descriptor: &Descriptor,
         _rate: f64,
         _bundle_path: &CStr,
-        _features: Option<&[*mut Feature]>,
+        _features: Option<&FeaturesList>,
     ) -> Option<Self> {
         Some(Self {
             gain: ports::ParameterInputPort::new(),
@@ -35,12 +35,18 @@ impl Plugin for ExAmp {
     fn run(&mut self, n_samples: u32) {
         let input = unsafe { self.input.as_slice(n_samples) }.unwrap();
         let output = unsafe { self.output.as_slice(n_samples) }.unwrap();
-        let gain = unsafe { self.gain.get() }.unwrap();
+        let gain = *(unsafe { self.gain.get() }.unwrap());
+
+        let coef = if gain > -90.0 {
+            10.0f32.powf(gain * 0.05)
+        } else {
+            0.0
+        };
 
         for (i_frame, o_frame) in input.iter().zip(output.iter_mut()) {
-            *o_frame = *gain * i_frame;
+            *o_frame = coef * i_frame;
         }
     }
 }
 
-lv2_main!(core, ExAmp, b"https://github.com/Janonard/ExAmp\0");
+lv2_main!(core, ExAmp, b"https://github.com/Janonard/eg-amp-rs\0");

@@ -1,5 +1,5 @@
 [package]
-name = "examp-rs"
+name = "eg-amp-rs"
 version = "0.1.0"
 authors = ["Janonard <janonard@protonmail.com>"]
 edition = "2018"
@@ -8,4 +8,4 @@ edition = "2018"
 crate-type = ["dylib"]
 
 [dependencies]
-lv2rs = "*"
+lv2rs = { git = "https://github.com/Janonard/lv2rs.git" }
