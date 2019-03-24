@@ -10,14 +10,14 @@ use urid::URID;
 
 #[repr(C)]
 pub struct PropertyHeader {
-    key: URID,
-    context: URID,
+    pub key: URID,
+    pub context: URID,
 }
 
 #[repr(C)]
 pub struct ObjectHeader {
-    id: URID,
-    otype: URID,
+    pub id: URID,
+    pub otype: URID,
 }
 
 impl ArrayAtomHeader for ObjectHeader {
