@@ -1,3 +1,4 @@
+//! URIs and URIDs of the atom library.
 use std::ffi::CStr;
 use urid::URID;
 
@@ -37,6 +38,11 @@ pub const TIME_UNIT_URI: &[u8] = b"http://lv2plug.in/ns/ext/atom#timeUnit\0";
 
 static mut URID_MAP: MappedURIDs = MappedURIDs::__default();
 
+/// A struct containing the URID of every URI in the module.
+///
+/// There is also a static variable which can be updated with the [`update`](#method.update) and
+/// retrieved with the [`get_map`](#method.get_map) methods, although these should be used as rarely
+/// as possible.
 #[derive(Clone)]
 pub struct MappedURIDs {
     pub root: URID,
@@ -111,42 +117,55 @@ impl MappedURIDs {
         }
     }
 
-    pub unsafe fn update(map: &mut urid::Map) -> &MappedURIDs {
-        URID_MAP.root = map.map(CStr::from_bytes_with_nul(URI).unwrap());
-        URID_MAP.atom = map.map(CStr::from_bytes_with_nul(ATOM_TYPE_URI).unwrap());
-        URID_MAP.atom_port = map.map(CStr::from_bytes_with_nul(ATOM_PORT_TYPE_URI).unwrap());
-        URID_MAP.blank = map.map(CStr::from_bytes_with_nul(BLANK_TYPE_URI).unwrap());
-        URID_MAP.bool = map.map(CStr::from_bytes_with_nul(BOOL_TYPE_URI).unwrap());
-        URID_MAP.chunk = map.map(CStr::from_bytes_with_nul(CHUNK_TYPE_URI).unwrap());
-        URID_MAP.double = map.map(CStr::from_bytes_with_nul(DOUBLE_TYPE_URI).unwrap());
-        URID_MAP.event = map.map(CStr::from_bytes_with_nul(EVENT_TYPE_URI).unwrap());
-        URID_MAP.float = map.map(CStr::from_bytes_with_nul(FLOAT_TYPE_URI).unwrap());
-        URID_MAP.int = map.map(CStr::from_bytes_with_nul(INT_TYPE_URI).unwrap());
-        URID_MAP.literal = map.map(CStr::from_bytes_with_nul(LITERAL_TYPE_URI).unwrap());
-        URID_MAP.long = map.map(CStr::from_bytes_with_nul(LONG_TYPE_URI).unwrap());
-        URID_MAP.number = map.map(CStr::from_bytes_with_nul(NUMBER_TYPE_URI).unwrap());
-        URID_MAP.object = map.map(CStr::from_bytes_with_nul(OBJECT_TYPE_URI).unwrap());
-        URID_MAP.path = map.map(CStr::from_bytes_with_nul(PATH_TYPE_URI).unwrap());
-        URID_MAP.property = map.map(CStr::from_bytes_with_nul(PROPERTY_TYPE_URI).unwrap());
-        URID_MAP.resource = map.map(CStr::from_bytes_with_nul(RESOURCE_TYPE_URI).unwrap());
-        URID_MAP.sequence = map.map(CStr::from_bytes_with_nul(SEQUENCE_TYPE_URI).unwrap());
-        URID_MAP.sound = map.map(CStr::from_bytes_with_nul(SOUND_TYPE_URI).unwrap());
-        URID_MAP.string = map.map(CStr::from_bytes_with_nul(STRING_TYPE_URI).unwrap());
-        URID_MAP.tuple = map.map(CStr::from_bytes_with_nul(TUPLE_TYPE_URI).unwrap());
-        URID_MAP.uri = map.map(CStr::from_bytes_with_nul(URI_TYPE_URI).unwrap());
-        URID_MAP.urid = map.map(CStr::from_bytes_with_nul(URID_TYPE_URI).unwrap());
-        URID_MAP.vector = map.map(CStr::from_bytes_with_nul(VECTOR_TYPE_URI).unwrap());
-        URID_MAP.atom_transfer = map.map(CStr::from_bytes_with_nul(ATOM_TRANSFER_URI).unwrap());
-        URID_MAP.beat_time = map.map(CStr::from_bytes_with_nul(BEAT_TIME_URI).unwrap());
-        URID_MAP.buffer = map.map(CStr::from_bytes_with_nul(BUFFER_TYPE_URI).unwrap());
-        URID_MAP.child = map.map(CStr::from_bytes_with_nul(CHILD_TYPE_URI).unwrap());
-        URID_MAP.event_transfer = map.map(CStr::from_bytes_with_nul(EVENT_TRANSFER_URI).unwrap());
-        URID_MAP.frame_time = map.map(CStr::from_bytes_with_nul(FRAME_TIME_URI).unwrap());
-        URID_MAP.supports = map.map(CStr::from_bytes_with_nul(SUPPORTS_URI).unwrap());
-        URID_MAP.time_unit = map.map(CStr::from_bytes_with_nul(TIME_UNIT_URI).unwrap());
+    /// Update the static URID map and return a reference to it.
+    ///
+    /// This function should only be called in a plugin's `instantiate` method since it accesses
+    /// the static URID map and therefore could yield undefined behaviour. Therefore, you should
+    /// use this method as rarely as possible.
+    pub unsafe fn update(map: &mut urid::Map) -> &'static MappedURIDs {
+        let new_map = MappedURIDs {
+            root: map.map(CStr::from_bytes_with_nul(URI).unwrap()),
+            atom: map.map(CStr::from_bytes_with_nul(ATOM_TYPE_URI).unwrap()),
+            atom_port: map.map(CStr::from_bytes_with_nul(ATOM_PORT_TYPE_URI).unwrap()),
+            blank: map.map(CStr::from_bytes_with_nul(BLANK_TYPE_URI).unwrap()),
+            bool: map.map(CStr::from_bytes_with_nul(BOOL_TYPE_URI).unwrap()),
+            chunk: map.map(CStr::from_bytes_with_nul(CHUNK_TYPE_URI).unwrap()),
+            double: map.map(CStr::from_bytes_with_nul(DOUBLE_TYPE_URI).unwrap()),
+            event: map.map(CStr::from_bytes_with_nul(EVENT_TYPE_URI).unwrap()),
+            float: map.map(CStr::from_bytes_with_nul(FLOAT_TYPE_URI).unwrap()),
+            int: map.map(CStr::from_bytes_with_nul(INT_TYPE_URI).unwrap()),
+            literal: map.map(CStr::from_bytes_with_nul(LITERAL_TYPE_URI).unwrap()),
+            long: map.map(CStr::from_bytes_with_nul(LONG_TYPE_URI).unwrap()),
+            number: map.map(CStr::from_bytes_with_nul(NUMBER_TYPE_URI).unwrap()),
+            object: map.map(CStr::from_bytes_with_nul(OBJECT_TYPE_URI).unwrap()),
+            path: map.map(CStr::from_bytes_with_nul(PATH_TYPE_URI).unwrap()),
+            property: map.map(CStr::from_bytes_with_nul(PROPERTY_TYPE_URI).unwrap()),
+            resource: map.map(CStr::from_bytes_with_nul(RESOURCE_TYPE_URI).unwrap()),
+            sequence: map.map(CStr::from_bytes_with_nul(SEQUENCE_TYPE_URI).unwrap()),
+            sound: map.map(CStr::from_bytes_with_nul(SOUND_TYPE_URI).unwrap()),
+            string: map.map(CStr::from_bytes_with_nul(STRING_TYPE_URI).unwrap()),
+            tuple: map.map(CStr::from_bytes_with_nul(TUPLE_TYPE_URI).unwrap()),
+            uri: map.map(CStr::from_bytes_with_nul(URI_TYPE_URI).unwrap()),
+            urid: map.map(CStr::from_bytes_with_nul(URID_TYPE_URI).unwrap()),
+            vector: map.map(CStr::from_bytes_with_nul(VECTOR_TYPE_URI).unwrap()),
+            atom_transfer: map.map(CStr::from_bytes_with_nul(ATOM_TRANSFER_URI).unwrap()),
+            beat_time: map.map(CStr::from_bytes_with_nul(BEAT_TIME_URI).unwrap()),
+            buffer: map.map(CStr::from_bytes_with_nul(BUFFER_TYPE_URI).unwrap()),
+            child: map.map(CStr::from_bytes_with_nul(CHILD_TYPE_URI).unwrap()),
+            event_transfer: map.map(CStr::from_bytes_with_nul(EVENT_TRANSFER_URI).unwrap()),
+            frame_time: map.map(CStr::from_bytes_with_nul(FRAME_TIME_URI).unwrap()),
+            supports: map.map(CStr::from_bytes_with_nul(SUPPORTS_URI).unwrap()),
+            time_unit: map.map(CStr::from_bytes_with_nul(TIME_UNIT_URI).unwrap()),
+        };
+        URID_MAP = new_map;
         &URID_MAP
     }
 
+    /// Retrieve a reference to the mapped URIDs of this module.
+    ///
+    /// This function should only be called in a plugin's `run` method since it accesses the static
+    /// URID map and therefore could yield undefined behaviour. Therefore, you should use this
+    /// method as rarely as possible.
     pub unsafe fn get_map() -> &'static MappedURIDs {
         &URID_MAP
     }
