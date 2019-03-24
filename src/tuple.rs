@@ -48,7 +48,7 @@ pub trait TupleWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, Tuple> {
         urids: &A::MappedURIDs,
     ) -> Result<NestedFrame<'b, 'a, A>, ()> {
         unsafe {
-            let mut frame = self.create_atom_frame::<A>(urids)?;
+            let mut frame = self.create_nested_frame::<A>(urids)?;
             A::initialize_body(&mut frame, parameter)?;
             Ok(frame)
         }

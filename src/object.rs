@@ -82,7 +82,7 @@ pub trait ObjectWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, Object>
     ) -> Result<NestedFrame<'b, 'a, A>, ()> {
         unsafe {
             self.write_sized(p_header)?;
-            let mut frame = self.create_atom_frame::<A>(urids)?;
+            let mut frame = self.create_nested_frame::<A>(urids)?;
             A::initialize_body(&mut frame, parameter)?;
             Ok(frame)
         }
