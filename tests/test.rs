@@ -23,10 +23,10 @@ fn test_scalar() {
     in_port.connect_port(atom as &AtomHeader);
 
     // Writing.
-    out_port.write_atom(&42.0f32, &mut urids).unwrap();
+    unsafe { out_port.write_atom(&42.0f32, &mut urids) }.unwrap();
 
     // Reading.
-    let atom = in_port.get_atom(&mut urids).unwrap();
+    let atom = unsafe { in_port.get_atom(&mut urids) }.unwrap();
 
     // Asserting.
     assert_eq!(4, atom.body_size());
@@ -54,14 +54,13 @@ fn test_literal() {
     in_port.connect_port(atom as &AtomHeader);
 
     // Writing.
-    assert!(out_port
-        .write_atom(&0, &mut urids)
+    assert!(unsafe { out_port.write_atom(&0, &mut urids) }
         .unwrap()
         .write_string("Hello World!")
         .is_ok());
 
     // Reading.
-    let atom = in_port.get_atom(&mut urids).unwrap();
+    let atom = unsafe { in_port.get_atom(&mut urids) }.unwrap();
 
     // Asserting.
     assert_eq!(21, atom.body_size());
@@ -93,10 +92,10 @@ fn test_string() {
 
     let message = CStr::from_bytes_with_nul(b"Hello World!\0").unwrap();
     // Writing.
-    out_port.write_atom(message, &mut urids).unwrap();
+    unsafe { out_port.write_atom(message, &mut urids) }.unwrap();
 
     // Reading.
-    let atom = in_port.get_atom(&mut urids).unwrap();
+    let atom = unsafe { in_port.get_atom(&mut urids) }.unwrap();
 
     // Asserting.
     assert_eq!(13, atom.body_size());
@@ -125,13 +124,13 @@ fn test_vector() {
 
     // Writing.
     {
-        let mut frame = out_port.write_atom(&(), &mut urids).unwrap();
+        let mut frame = unsafe { out_port.write_atom(&(), &mut urids) }.unwrap();
         frame.push(0.0).unwrap();
         frame.append(&[1.0, 2.0, 3.0, 4.0]).unwrap();
     }
 
     // Reading.
-    let atom = in_port.get_atom(&mut urids).unwrap();
+    let atom = unsafe { in_port.get_atom(&mut urids) }.unwrap();
 
     // Asserting.
     assert_eq!(8 + 4 * 5, atom.body_size());
@@ -165,7 +164,7 @@ fn test_tuple() {
 
     // Writing.
     {
-        let mut frame = out_port.write_atom(&(), &mut urids).unwrap();
+        let mut frame = unsafe { out_port.write_atom(&(), &mut urids) }.unwrap();
         assert_eq!(0, frame.get_header().size % 8);
         frame.push_atom::<i32>(&42, &mut urids).unwrap();
         assert_eq!(0, frame.get_header().size % 8);
@@ -184,7 +183,7 @@ fn test_tuple() {
     }
 
     // Reading.
-    let atom = in_port.get_atom(&mut urids).unwrap();
+    let atom = unsafe { in_port.get_atom(&mut urids) }.unwrap();
 
     // i32: AtomHeader, int, pad.
     let mut assumed_size = 8 + 4 + 4;
@@ -230,7 +229,7 @@ fn test_sequence() {
 
     // Writing.
     {
-        let mut frame = out_port.write_atom(&TimeUnit::Frames, &mut urids).unwrap();
+        let mut frame = unsafe { out_port.write_atom(&TimeUnit::Frames, &mut urids) }.unwrap();
         assert_eq!(0, frame.get_header().size % 8);
         frame
             .push_event::<i32>(TimeStamp::Frames(0), &42, &mut urids)
@@ -257,7 +256,7 @@ fn test_sequence() {
     }
 
     // Reading.
-    let atom = in_port.get_atom(&mut urids).unwrap();
+    let atom = unsafe { in_port.get_atom(&mut urids) }.unwrap();
     let mut sequence_iter = atom.iter(&mut urids).unwrap();
 
     let (time_stamp, integer) = sequence_iter.next().unwrap();
