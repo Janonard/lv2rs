@@ -32,10 +32,10 @@
 //!             let c_message = CStr::from_bytes_with_nul(message.as_bytes()).unwrap();
 //!
 //!             // Writing.
-//!             self.out_port.write_atom(c_message, &mut self.urids).unwrap();
+//!             unsafe { self.out_port.write_atom(c_message, &mut self.urids).unwrap() };
 //!
 //!             // Reading.
-//!             let atom = self.in_port.get_atom(&mut self.urids).unwrap();
+//!             let atom = unsafe { self.in_port.get_atom(&mut self.urids) }.unwrap();
 //!             let str = atom.as_cstr().unwrap().to_str().unwrap();
 //!             assert_eq!("Hello World!", str);
 //!         }

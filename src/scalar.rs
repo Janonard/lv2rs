@@ -33,10 +33,10 @@
 //!         /// Simulated `run` method.
 //!         fn run(&mut self) {
 //!             // Writing.
-//!             self.out_port.write_atom(&42.0f32, &mut self.urids).unwrap();
+//!             unsafe { self.out_port.write_atom(&42.0f32, &mut self.urids) }.unwrap();
 //!
 //!             // Reading.
-//!             let atom = self.in_port.get_atom(&mut self.urids).unwrap();
+//!             let atom = unsafe { self.in_port.get_atom(&mut self.urids) }.unwrap();
 //!             assert_eq!(42.0, **atom);
 //!         }
 //!     }

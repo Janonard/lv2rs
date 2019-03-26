@@ -36,13 +36,14 @@
 //!         fn run(&mut self) {
 //!             // Writing
 //!             {
-//!                 let mut frame = self.out_port.write_atom(&(), &mut self.urids).unwrap();
+//!                 let mut frame =
+//!                     unsafe { self.out_port.write_atom(&(), &mut self.urids) }.unwrap();
 //!                 frame.push(0.0).unwrap();
 //!                 frame.append(&[1.0, 2.0, 3.0, 4.0]).unwrap();
 //!             }
 //!
 //!             // Reading.
-//!             let atom = self.in_port.get_atom(&mut self.urids).unwrap();
+//!             let atom = unsafe { self.in_port.get_atom(&mut self.urids) }.unwrap();
 //!             let data = atom.as_slice();
 //!             assert_eq!([0.0, 1.0, 2.0, 3.0, 4.0], data);
 //!         }
