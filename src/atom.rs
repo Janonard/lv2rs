@@ -267,14 +267,6 @@ pub mod array {
             Ok(atom_ref)
         }
 
-        /// Return true if more than the body header was written with the writer.
-        pub fn was_data_written<'a, W>(writer: &mut W) -> bool
-        where
-            W: WritingFrame<'a> + WritingFrameExt<'a, Self>,
-        {
-            (writer.get_header().size as usize) > size_of::<H>()
-        }
-
         /// Push another value to the data array.
         ///
         /// This method assumes that the atom was already initialized, but since can't be checked,

@@ -56,14 +56,14 @@ fn test_literal() {
     // Writing.
     assert!(unsafe { out_port.write_atom(&0, &mut urids) }
         .unwrap()
-        .write_string("Hello World!")
+        .append_string("Hello World!")
         .is_ok());
 
     // Reading.
     let atom = unsafe { in_port.get_atom(&mut urids) }.unwrap();
 
     // Asserting.
-    assert_eq!(21, atom.body_size());
+    assert_eq!(20, atom.body_size());
     assert_eq!(
         urids.map(CStr::from_bytes_with_nul(atom::uris::LITERAL_TYPE_URI).unwrap()),
         atom.body_type()
@@ -177,7 +177,7 @@ fn test_tuple() {
         frame
             .push_atom::<Literal>(&0, &mut urids)
             .unwrap()
-            .write_string("Hello World!")
+            .append_string("Hello World!")
             .unwrap();
         assert_eq!(0, frame.get_header().size % 8);
     }
