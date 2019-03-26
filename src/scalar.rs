@@ -17,7 +17,7 @@
 //!
 //!     extern crate lv2rs_atom as atom;
 //!     extern crate lv2rs_urid as urid;
-//!     
+//!
 //!     use atom::prelude::*;
 //!     use atom::ports::*;
 //!     use urid::{CachedMap, debug::DebugMap};
@@ -113,33 +113,25 @@ where
     }
 }
 
-pub use std::os::raw::c_int;
-
-impl ScalarAtomBody for c_int {
+impl ScalarAtomBody for i32 {
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::INT_TYPE_URI) }
     }
 }
 
-pub use std::os::raw::c_long;
-
-impl ScalarAtomBody for c_long {
+impl ScalarAtomBody for i64 {
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::LONG_TYPE_URI) }
     }
 }
 
-pub use std::os::raw::c_float;
-
-impl ScalarAtomBody for c_float {
+impl ScalarAtomBody for f32 {
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::FLOAT_TYPE_URI) }
     }
 }
 
-pub use std::os::raw::c_double;
-
-impl ScalarAtomBody for c_double {
+impl ScalarAtomBody for f64 {
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(uris::DOUBLE_TYPE_URI) }
     }

@@ -19,7 +19,7 @@
 //!
 //!     extern crate lv2rs_atom as atom;
 //!     extern crate lv2rs_urid as urid;
-//!     
+//!
 //!     use atom::prelude::*;
 //!     use atom::ports::*;
 //!     use urid::{CachedMap, debug::DebugMap};
