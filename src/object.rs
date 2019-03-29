@@ -50,7 +50,7 @@
 //!                 let mut frame =
 //!                     unsafe {
 //!                         self.out_port.write_atom(
-//!                             &(0, my_class),
+//!                             &(0, my_class_urid),
 //!                             &mut self.urids
 //!                         )
 //!                     }.unwrap();
