@@ -168,8 +168,8 @@ where
     }
 }
 
-/// Extension for [`WritingFrame`](../frame/struct.WritingFrame.html) and
-/// [`WritingFrameExt`](../frame/struct.WritingFrameExt.html) for vectors.
+/// Extension for [`WritingFrame`](../frame/trait.WritingFrame.html) and
+/// [`WritingFrameExt`](../frame/trait.WritingFrameExt.html) for vectors.
 ///
 /// See the [module documentation](index.html) for more information.
 pub trait VectorWritingFrame<'a, T>
