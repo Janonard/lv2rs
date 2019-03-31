@@ -61,7 +61,6 @@
 //! for meaningfulness. Instead, you should use the safe methods provided by the writing frame
 //! extensions, which are tailored for specific atoms and guarantee the consistency of the resulting
 //! output.
-extern crate lv2rs_core as core;
 extern crate lv2rs_urid as urid;
 
 pub mod atom;
