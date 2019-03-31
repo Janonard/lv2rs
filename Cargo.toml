@@ -5,3 +5,6 @@ authors = ["Janonard <janonard@protonmail.com>"]
 edition = "2018"
 
 [dependencies]
+lv2rs-atom = { git = "https://github.com/Janonard/lv2rs-atom.git" }
+lv2rs-urid = { git = "https://github.com/Janonard/lv2rs-urid.git" }
+ux = "0.1.3"
