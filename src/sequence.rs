@@ -14,7 +14,11 @@ pub enum TimeUnit {
 
 impl TimeUnit {
     pub fn try_from_urid(urid: URID, urids: &mut urid::CachedMap) -> Result<TimeUnit, ()> {
-        if urid == urids.map(unsafe { CStr::from_bytes_with_nul_unchecked(uris::BEAT_TIME_URI) }) {
+        if urid == 0 {
+            Ok(TimeUnit::Frames)
+        } else if urid
+            == urids.map(unsafe { CStr::from_bytes_with_nul_unchecked(uris::BEAT_TIME_URI) })
+        {
             Ok(TimeUnit::Beats)
         } else if urid
             == urids.map(unsafe { CStr::from_bytes_with_nul_unchecked(uris::FRAME_TIME_URI) })
