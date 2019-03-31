@@ -13,3 +13,4 @@ edition = "2018"
 lv2rs-core = { git = "https://github.com/Janonard/lv2rs-core.git" }
 lv2rs-urid = { git = "https://github.com/Janonard/lv2rs-urid.git" }
 lv2rs-atom = { git = "https://github.com/Janonard/lv2rs-atom.git" }
+lv2rs-midi = { git = "https://github.com/Janonard/lv2rs-midi.git" }

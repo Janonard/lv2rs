@@ -28,3 +28,4 @@
 pub extern crate lv2rs_core as core;
 pub extern crate lv2rs_urid as urid;
 pub extern crate lv2rs_atom as atom;
+pub extern crate lv2rs_midi as midi;
