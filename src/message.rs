@@ -58,6 +58,22 @@ pub enum MidiMessage<'a> {
     SysEx(SystemExclusiveMessage<'a>),
 }
 
+impl<'a> MidiMessage<'a> {
+    pub fn unwrap_standard(&self) -> &StandardMidiMessage {
+        match self {
+            MidiMessage::Standard(message) => message,
+            _ => panic!("Invalid `MidiMessage` value"),
+        }
+    }
+
+    pub fn unwrap_sysex(&self) -> &SystemExclusiveMessage<'a> {
+        match self {
+            MidiMessage::SysEx(message) => message,
+            _ => panic!("Invalid `MidiMessage` value"),
+        }
+    }
+}
+
 pub const NOTE_OFF_STATUS: u8 = 0b10000000;
 pub const NOTE_ON_STATUS: u8 = 0b10010000;
 pub const POLY_KEY_PRESSURE_STATUS: u8 = 0b10100000;
