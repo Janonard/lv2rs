@@ -23,7 +23,7 @@ pub struct Midigate {
 impl Midigate {
     fn assure_null_len(&mut self, min_len: usize) {
         if self.null.len() < min_len {
-            let n_new_frames = self.null.len() - min_len;
+            let n_new_frames: usize = min_len - self.null.len();
             self.null.reserve(n_new_frames);
             for _ in 0..n_new_frames {
                 self.null.push(0.0);
@@ -48,7 +48,7 @@ impl Plugin for Midigate {
         let mut plugin = Self {
             control_port: AtomInputPort::new(&mut cached_map),
             in_port: AudioInputPort::new(),
-            null: Vec::new(),
+            null: Vec::with_capacity(rate as usize),
             out_port: AudioOutputPort::new(),
 
             urid_map: cached_map,
@@ -91,11 +91,17 @@ impl Plugin for Midigate {
         let audio_output = unsafe { self.out_port.as_slice(n_samples) }.unwrap();
 
         for (time_stamp, midi_event) in events_atom.iter(&mut self.urid_map).unwrap() {
+            let midi_event = match midi_event.cast::<RawMidiMessage>(&mut self.urid_map) {
+                Ok(midi_event) => midi_event,
+                Err(_) => continue,
+            };
+
+            let midi_event = match midi_event.interpret() {
+                Ok(event) => event,
+                Err(_) => continue,
+            };
+
             // receiving note-ons and note-offs.
-            let midi_event = midi_event
-                .cast::<RawMidiMessage>(&mut self.urid_map)
-                .unwrap();
-            let midi_event = midi_event.interpret().unwrap();
             match midi_event.unwrap_standard() {
                 StandardMidiMessage::NoteOn {
                     channel: _,

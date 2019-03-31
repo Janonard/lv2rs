@@ -1,8 +1,9 @@
-@prefix doap:  <http://usefulinc.com/ns/doap#> .
-@prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
-@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
-@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix units: <http://lv2plug.in/ns/extensions/units#> .
+@prefix atom: <http://lv2plug.in/ns/ext/atom#> .
+@prefix doap: <http://usefulinc.com/ns/doap#> .
+@prefix lv2:  <http://lv2plug.in/ns/lv2core#> .
+@prefix midi: <http://lv2plug.in/ns/ext/midi#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix urid: <http://lv2plug.in/ns/ext/urid#> .
 
 <https://github.com/Janonard/eg-midigate-rs>
         a lv2:Plugin ;
