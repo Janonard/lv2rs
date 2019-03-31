@@ -1,6 +1,6 @@
 use ux::*;
 
-pub enum MidiMessage<'a> {
+pub enum StandardMidiMessage {
     NoteOff {
         channel: u4,
         note: u7,
@@ -32,9 +32,6 @@ pub enum MidiMessage<'a> {
         channel: u4,
         value: u14,
     },
-    SystemExclusive {
-        data: &'a [u7],
-    },
     TimeCodeQuarterFrame {
         message_type: u3,
         value: u4,
@@ -52,6 +49,13 @@ pub enum MidiMessage<'a> {
     Stop,
     ActiveSensing,
     SystemReset,
+}
+
+type SystemExclusiveMessage<'a> = &'a [u7];
+
+pub enum MidiMessage<'a> {
+    Standard(StandardMidiMessage),
+    SysEx(SystemExclusiveMessage<'a>),
 }
 
 pub const NOTE_OFF_STATUS: u8 = 0b10000000;
@@ -98,13 +102,13 @@ fn data_to_u14(lsb: u7, msb: u7) -> u14 {
 impl<'a> MidiMessage<'a> {
     fn try_from_one_byte(status: u8) -> Result<Self, TryFromError> {
         match status {
-            TUNE_REQUEST_STATUS => Ok(MidiMessage::TuneRequest),
-            TIMING_CLOCK_STATUS => Ok(MidiMessage::TimingClock),
-            START_STATUS => Ok(MidiMessage::Start),
-            CONTINUE_STATUS => Ok(MidiMessage::Continue),
-            STOP_STATUS => Ok(MidiMessage::Stop),
-            ACTIVE_SENSING_STATUS => Ok(MidiMessage::ActiveSensing),
-            SYSTEM_RESET_STATUS => Ok(MidiMessage::SystemReset),
+            TUNE_REQUEST_STATUS => Ok(MidiMessage::Standard(StandardMidiMessage::TuneRequest)),
+            TIMING_CLOCK_STATUS => Ok(MidiMessage::Standard(StandardMidiMessage::TimingClock)),
+            START_STATUS => Ok(MidiMessage::Standard(StandardMidiMessage::Start)),
+            CONTINUE_STATUS => Ok(MidiMessage::Standard(StandardMidiMessage::Continue)),
+            STOP_STATUS => Ok(MidiMessage::Standard(StandardMidiMessage::Stop)),
+            ACTIVE_SENSING_STATUS => Ok(MidiMessage::Standard(StandardMidiMessage::ActiveSensing)),
+            SYSTEM_RESET_STATUS => Ok(MidiMessage::Standard(StandardMidiMessage::SystemReset)),
             _ => Err(TryFromError::UnknownMessage),
         }
     }
@@ -114,22 +118,26 @@ impl<'a> MidiMessage<'a> {
 
         match channel_status {
             POLY_KEY_PRESSURE_STATUS => {
-                return Ok(MidiMessage::PolyKeyPressure {
-                    channel: channel,
-                    pressure: data,
-                });
+                return Ok(MidiMessage::Standard(
+                    StandardMidiMessage::PolyKeyPressure {
+                        channel: channel,
+                        pressure: data,
+                    },
+                ));
             }
             PROGRAM_CHANGE_STATUS => {
-                return Ok(MidiMessage::ProgramChange {
+                return Ok(MidiMessage::Standard(StandardMidiMessage::ProgramChange {
                     channel: channel,
                     program_number: data,
-                });
+                }));
             }
             CHANNEL_PRESSURE_STATUS => {
-                return Ok(MidiMessage::ChannelPressure {
-                    channel: channel,
-                    pressure: data,
-                });
+                return Ok(MidiMessage::Standard(
+                    StandardMidiMessage::ChannelPressure {
+                        channel: channel,
+                        pressure: data,
+                    },
+                ));
             }
             _ => (),
         }
@@ -139,12 +147,16 @@ impl<'a> MidiMessage<'a> {
                 let data: u8 = data.into();
                 let message_type = u3::new((data & 0b01110000) >> 4);
                 let value = u4::new(data & 0b00001111);
-                Ok(MidiMessage::TimeCodeQuarterFrame {
-                    message_type: message_type,
-                    value: value,
-                })
+                Ok(MidiMessage::Standard(
+                    StandardMidiMessage::TimeCodeQuarterFrame {
+                        message_type: message_type,
+                        value: value,
+                    },
+                ))
             }
-            SONG_SELECT_STATUS => Ok(MidiMessage::SongSelect { song: data }),
+            SONG_SELECT_STATUS => Ok(MidiMessage::Standard(StandardMidiMessage::SongSelect {
+                song: data,
+            })),
             _ => Err(TryFromError::UnknownMessage),
         }
     }
@@ -158,32 +170,34 @@ impl<'a> MidiMessage<'a> {
 
         match channel_status {
             NOTE_OFF_STATUS => {
-                return Ok(MidiMessage::NoteOff {
+                return Ok(MidiMessage::Standard(StandardMidiMessage::NoteOff {
                     channel: channel,
                     note: first_data,
                     velocity: second_data,
-                });
+                }));
             }
             NOTE_ON_STATUS => {
-                return Ok(MidiMessage::NoteOn {
+                return Ok(MidiMessage::Standard(StandardMidiMessage::NoteOn {
                     channel: channel,
                     note: first_data,
                     velocity: second_data,
-                });
+                }));
             }
             CONTROL_CHANGE_STATUS => {
-                return Ok(MidiMessage::ControlChange {
+                return Ok(MidiMessage::Standard(StandardMidiMessage::ControlChange {
                     channel: channel,
                     control_number: first_data,
                     control_value: second_data,
-                });
+                }));
             }
             PITCH_BEND_CHANGE_STATUS => {
                 let value = data_to_u14(first_data, second_data);
-                return Ok(MidiMessage::PitchBendChange {
-                    channel: channel,
-                    value: value,
-                });
+                return Ok(MidiMessage::Standard(
+                    StandardMidiMessage::PitchBendChange {
+                        channel: channel,
+                        value: value,
+                    },
+                ));
             }
             _ => (),
         }
@@ -191,7 +205,9 @@ impl<'a> MidiMessage<'a> {
         match status {
             SONG_POSITION_POINTER_STATUS => {
                 let value = data_to_u14(first_data, second_data);
-                Ok(MidiMessage::SongPositionPointer { position: value })
+                Ok(MidiMessage::Standard(
+                    StandardMidiMessage::SongPositionPointer { position: value },
+                ))
             }
             _ => Err(TryFromError::UnknownMessage),
         }
@@ -223,7 +239,7 @@ impl<'a> MidiMessage<'a> {
         let data = unsafe { std::slice::from_raw_parts(data.as_ptr() as *const u7, data.len()) };
 
         if status_byte == START_OF_SYSTEM_EXCLUSIVE_STATUS {
-            Ok(MidiMessage::SystemExclusive { data: data })
+            Ok(MidiMessage::SysEx(data))
         } else if data.len() == 0 {
             Self::try_from_one_byte(status_byte)
         } else if data.len() == 1 {

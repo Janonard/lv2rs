@@ -1,6 +1,7 @@
-extern crate lv2rs_atom as atom;
-extern crate lv2rs_urid as urid;
+extern crate lv2rs_atom;
+extern crate lv2rs_urid;
 extern crate ux;
 
+pub mod atom;
 pub mod message;
 pub mod uris;
