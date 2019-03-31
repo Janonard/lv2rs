@@ -78,6 +78,7 @@ pub const STOP_STATUS: u8 = 0b11111100;
 pub const ACTIVE_SENSING_STATUS: u8 = 0b11111110;
 pub const SYSTEM_RESET_STATUS: u8 = 0b11111111;
 
+#[derive(Debug)]
 pub enum TryFromError {
     UnknownMessage,
     SliceToShort,
