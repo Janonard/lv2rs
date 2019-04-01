@@ -18,18 +18,27 @@ pub struct AtomHeader {
 impl AtomHeader {
     /// Try to widen a `AtomHeader` reference to a `Atom` reference.
     ///
-    /// This method returns `Err` if the atom type in the header is not equal to the atom's URID or
-    /// if the size in the header does not fit the atom. An example for one such case would be an
-    /// atom header with type URID of `float` (in Rust `f32`), but with a size of one byte.
-    ///
     /// Also, this method is unsafe since it can not check if the memory space after the header is
     /// actually allocated. Therefore, this method could have undefined behaviour.
     pub unsafe fn widen_ref<A: AtomBody + ?Sized>(
         &self,
         urids: &mut urid::CachedMap,
-    ) -> Result<&Atom<A>, ()> {
+    ) -> Result<&Atom<A>, WidenRefError> {
         A::widen_ref(self, urids)
     }
+}
+
+/// Errors that may occur when calling [`AtomBody::widen_ref`](trait.AtomBody.html#tymethod.widen_ref).
+#[derive(Debug)]
+pub enum WidenRefError {
+    /// The URID noted in the atom header is wrong.
+    ///
+    /// Maybe you tried to use the wrong atom type?
+    WrongURID,
+    /// The atom is malformed.
+    ///
+    /// You can't do much about it; This is the fault of other plugins.
+    MalformedAtom,
 }
 
 /// Abstraction of atom bodies.
@@ -70,6 +79,8 @@ pub trait AtomBody {
     /// include it when it is dropped.
     /// * You do not need (and definitely should not try) to update the atom header for the new
     /// size. The writer will keep track of that.
+    /// * Your implementation should be implemented in a way that it can only return `Err` in cases
+    /// of insufficient memory.
     ///
     /// This method is unsafe since it can tamper if the integrity of the atom structure, for example
     /// if called twice.
@@ -83,10 +94,6 @@ pub trait AtomBody {
 
     /// Try to widen the header reference to a atom reference.
     ///
-    /// This method returns `Err` if the atom type in the header is not equal to the atom's URID or
-    /// if the size in the header does not fit the atom. An example for one such case would be an
-    /// atom header with type URID of `float` (in Rust `f32`), but with a size of one byte.
-    ///
     /// Also, this method is unsafe since you can not check if the memory space after the header is
     /// actually allocated. Therefore, this method could have undefined behaviour. However, you can
     /// assume that the size in the header is valid, since you cannot defend yourself from the
@@ -94,7 +101,7 @@ pub trait AtomBody {
     unsafe fn widen_ref<'a>(
         header: &'a AtomHeader,
         urids: &mut urid::CachedMap,
-    ) -> Result<&'a Atom<Self>, ()>;
+    ) -> Result<&'a Atom<Self>, WidenRefError>;
 }
 
 /// Generic type combining an atom header with a body.
@@ -150,7 +157,7 @@ impl<'a, A: AtomBody + ?Sized> From<&'a mut Atom<A>> for &'a mut AtomHeader {
 
 /// Special templates for dynamically sized atoms.
 pub mod array {
-    use crate::atom::{Atom, AtomBody, AtomHeader};
+    use crate::atom::*;
     use crate::frame::{WritingFrame, WritingFrameExt};
     use std::mem::{size_of, transmute};
 
@@ -234,27 +241,23 @@ pub mod array {
         ///
         /// This method will check if the type URID is correct and if the size is big enough to
         /// contain the body header. The rest of the size will be interpreted as data.
-        ///
-        /// The return value is `Err` if the type URID is wrong, if the body size is too small to
-        /// contain the body header or if the remaining size is not a multiple of the size of a data
-        /// element.
         pub unsafe fn __widen_ref<'a>(
             header: &'a AtomHeader,
             urids: &mut urid::CachedMap,
-        ) -> Result<&'a Atom<Self>, ()> {
+        ) -> Result<&'a Atom<Self>, WidenRefError> {
             if header.atom_type != urids.map(Self::get_uri()) {
-                return Err(());
+                return Err(WidenRefError::WrongURID);
             }
 
             let body_size = header.size as usize;
             let array_header_size = size_of::<H>();
             if body_size < array_header_size {
-                return Err(());
+                return Err(WidenRefError::MalformedAtom);
             }
 
             let body_size = body_size - array_header_size;
             if body_size % size_of::<T>() != 0 {
-                return Err(());
+                return Err(WidenRefError::MalformedAtom);
             }
             let vector_len: usize = body_size / size_of::<T>();
 
@@ -269,6 +272,8 @@ pub mod array {
 
         /// Push another value to the data array.
         ///
+        /// In case of insufficient memory, an `Err` is returned.
+        ///
         /// This method assumes that the atom was already initialized, but since can't be checked,
         /// this method is unsafe.
         pub unsafe fn push<'a, W>(writer: &mut W, value: T) -> Result<(), ()>
@@ -280,6 +285,8 @@ pub mod array {
         }
 
         /// Append a `T` slice to the data.
+        ///
+        /// In case of insufficient memory, an `Err` is returned.
         ///
         /// This method assumes that the atom was already initialized, but since can't be checked,
         /// this method is unsafe.

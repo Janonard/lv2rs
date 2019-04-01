@@ -63,7 +63,7 @@
 //!
 //!     // Calling `run`.
 //!     plugin.run();
-use crate::atom::{Atom, AtomBody, AtomHeader};
+use crate::atom::*;
 use crate::frame::{WritingFrame, WritingFrameExt};
 use crate::uris;
 use std::ffi::CStr;
@@ -100,16 +100,16 @@ where
     unsafe fn widen_ref<'a>(
         header: &'a AtomHeader,
         urids: &mut urid::CachedMap,
-    ) -> Result<&'a Atom<Self>, ()> {
-        if header.atom_type == urids.map(T::get_uri())
-            && header.size as usize == std::mem::size_of::<Self>()
-        {
-            Ok((header as *const AtomHeader as *const Atom<Self>)
-                .as_ref()
-                .unwrap())
-        } else {
-            Err(())
+    ) -> Result<&'a Atom<Self>, WidenRefError> {
+        if header.atom_type != urids.map(T::get_uri()) {
+            return Err(WidenRefError::WrongURID);
         }
+        if header.size as usize != std::mem::size_of::<Self>() {
+            return Err(WidenRefError::MalformedAtom);
+        }
+        Ok((header as *const AtomHeader as *const Atom<Self>)
+            .as_ref()
+            .unwrap())
     }
 }
 

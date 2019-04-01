@@ -6,7 +6,7 @@
 //! Nested atoms can also be created by every writing frame using the
 //! [`create_nested_frame`](trait.WritingFrameExt.html#method.create_nested_frame) method.
 //! These nested frames additionally account for padding when dropped.
-use crate::atom::{Atom, AtomBody, AtomHeader};
+use crate::atom::*;
 use std::marker::PhantomData;
 use std::mem::size_of;
 
@@ -93,7 +93,10 @@ pub trait WritingFrameExt<'a, A: AtomBody + ?Sized>: WritingFrame<'a> + Sized {
     /// Try to widen the atom header reference to an atom reference.
     ///
     /// This is just a shortcut for `A::widen_ref(frame.get_header(), urids)`.
-    unsafe fn get_atom<'b>(&'b self, urids: &mut urid::CachedMap) -> Result<&'b Atom<A>, ()> {
+    unsafe fn get_atom<'b>(
+        &'b self,
+        urids: &mut urid::CachedMap,
+    ) -> Result<&'b Atom<A>, WidenRefError> {
         A::widen_ref(self.get_header(), urids)
     }
 }

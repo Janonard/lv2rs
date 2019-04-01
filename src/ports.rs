@@ -13,6 +13,28 @@ pub struct AtomOutputPort<A: AtomBody + ?Sized> {
     phantom: PhantomData<A>,
 }
 
+/// Errors that may occur when calling [`AtomOutputPort::write_atom`](struct.AtomOuputPort.html#method.write_atom)
+#[derive(Debug)]
+pub enum WriteAtomError {
+    /// The internal pointer points to zero.
+    ///
+    /// Maybe `connect_port` is not implemented correctly?
+    NullPointer,
+    /// The host hasn't allocated enough memory to initialize the atom.
+    InsufficientSpace,
+}
+
+#[derive(Debug)]
+/// Error that may occur when calling [`AtomInputPort::get_atom`](struct.AtomInputPort.html#method.get_atom).
+pub enum GetAtomError {
+    /// The internal pointer points to zero.
+    ///
+    /// Maybe `connect_port` is not implemented correctly?
+    NullPointer,
+    /// Widening the atom header failed.
+    WidenRef(WidenRefError),
+}
+
 impl<A: AtomBody + ?Sized> AtomOutputPort<A> {
     /// Create a new port.
     ///
@@ -48,14 +70,16 @@ impl<A: AtomBody + ?Sized> AtomOutputPort<A> {
         &'a mut self,
         parameter: &A::InitializationParameter,
         urids: &mut urid::CachedMap,
-    ) -> Result<RootFrame<'a, A>, ()> {
+    ) -> Result<RootFrame<'a, A>, WriteAtomError> {
         let header = match self.atom.as_mut() {
             Some(header) => header,
-            None => return Err(()),
+            None => return Err(WriteAtomError::NullPointer),
         };
         let data = std::slice::from_raw_parts_mut(self.atom as *mut u8, header.size as usize);
-        let mut frame = RootFrame::new(data, urids)?;
-        A::initialize_body(&mut frame, parameter, urids)?;
+        let mut frame =
+            RootFrame::new(data, urids).map_err(|_| WriteAtomError::InsufficientSpace)?;
+        A::initialize_body(&mut frame, parameter, urids)
+            .map_err(|_| WriteAtomError::InsufficientSpace)?;
         Ok(frame)
     }
 }
@@ -96,14 +120,14 @@ impl<A: AtomBody + ?Sized> AtomInputPort<A> {
     /// This method is unsafe since it dereferences the raw, internal pointer and therefore could
     /// yield undefined behaviour. Make sure that your plugin's `connect_port` method calls this
     /// port's [`connect_port`](#method.connect_port) method correctly!
-    pub unsafe fn get_atom(&self, urids: &mut urid::CachedMap) -> Result<&Atom<A>, ()> {
+    pub unsafe fn get_atom(&self, urids: &mut urid::CachedMap) -> Result<&Atom<A>, GetAtomError> {
         let atom = match self.atom.as_ref() {
             Some(atom) => atom,
-            None => return Err(()),
+            None => return Err(GetAtomError::NullPointer),
         };
         if atom.atom_type != self.type_urid {
-            return Err(());
+            return Err(GetAtomError::WidenRef(WidenRefError::WrongURID));
         }
-        A::widen_ref(atom, urids)
+        A::widen_ref(atom, urids).map_err(|err| GetAtomError::WidenRef(err))
     }
 }

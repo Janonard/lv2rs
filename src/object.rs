@@ -73,7 +73,7 @@
 //!                     let b = property.cast::<f32>(&mut self.urids).unwrap();
 //!                     assert_eq!(17.0, **b);
 //!                 } else {
-//!                     panic!("Unknown property in object!");       
+//!                     panic!("Unknown property in object!");
 //!                 }
 //!             }
 //!         }
@@ -101,10 +101,7 @@
 //!
 //!     // Calling `run`.
 //!     plugin.run();
-use crate::atom::{
-    array::{ArrayAtomBody, ArrayAtomHeader},
-    Atom, AtomBody, AtomHeader,
-};
+use crate::atom::{array::*, *};
 use crate::frame::{NestedFrame, WritingFrame, WritingFrameExt};
 use crate::unknown::*;
 use crate::uris;
@@ -187,7 +184,7 @@ impl AtomBody for Object {
     unsafe fn widen_ref<'a>(
         header: &'a AtomHeader,
         urids: &mut urid::CachedMap,
-    ) -> Result<&'a Atom<Self>, ()> {
+    ) -> Result<&'a Atom<Self>, WidenRefError> {
         Self::__widen_ref(header, urids)
     }
 }

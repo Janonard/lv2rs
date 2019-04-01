@@ -11,7 +11,7 @@
 //! a byte slice and iterates through all atoms in this slice. It makes the use of compound atoms
 //! like [`Sequence`s](../sequence/index.html) or [`Object`s](../object/index.html)
 //! even possible.
-use crate::atom::{Atom, AtomBody, AtomHeader};
+use crate::atom::*;
 use crate::frame::{WritingFrame, WritingFrameExt};
 use crate::uris;
 use std::ffi::CStr;
@@ -24,14 +24,11 @@ pub type Unknown = [u8];
 
 impl Atom<Unknown> {
     /// Try to cast the the `Atom<Unknown>` reference into a proper atom references.
-    ///
-    /// Returns `Err` if the atom body isn't of type `A`.
-    pub fn cast<A: AtomBody + ?Sized>(&self, urids: &mut urid::CachedMap) -> Result<&Atom<A>, ()> {
-        if self.header.atom_type == urids.map(A::get_uri()) {
-            unsafe { A::widen_ref(&self.header, urids) }
-        } else {
-            Err(())
-        }
+    pub fn cast<A: AtomBody + ?Sized>(
+        &self,
+        urids: &mut urid::CachedMap,
+    ) -> Result<&Atom<A>, WidenRefError> {
+        unsafe { A::widen_ref(&self.header, urids) }
     }
 }
 
@@ -78,14 +75,14 @@ impl AtomBody for Unknown {
     unsafe fn widen_ref<'a>(
         header: &'a AtomHeader,
         urids: &mut urid::CachedMap,
-    ) -> Result<&'a Atom<Self>, ()> {
+    ) -> Result<&'a Atom<Self>, WidenRefError> {
         let atom_ref = AtomHeader::widen_ref_unknown(header);
         if atom_ref.header.atom_type
             == urids.map(CStr::from_bytes_with_nul_unchecked(uris::CHUNK_TYPE_URI))
         {
             Ok(atom_ref)
         } else {
-            Err(())
+            Err(WidenRefError::WrongURID)
         }
     }
 }

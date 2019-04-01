@@ -67,10 +67,7 @@
 //!
 //!     // Calling `run`.
 //!     plugin.run();
-use crate::atom::{
-    array::{ArrayAtomBody, ArrayAtomHeader},
-    Atom, AtomBody, AtomHeader,
-};
+use crate::atom::{array::*, *};
 use crate::frame::{WritingFrame, WritingFrameExt};
 use crate::uris;
 use std::ffi::CStr;
@@ -134,7 +131,7 @@ impl AtomBody for Literal {
     unsafe fn widen_ref<'a>(
         header: &'a AtomHeader,
         urids: &mut urid::CachedMap,
-    ) -> Result<&'a Atom<Self>, ()> {
+    ) -> Result<&'a Atom<Self>, WidenRefError> {
         Self::__widen_ref(header, urids)
     }
 }
