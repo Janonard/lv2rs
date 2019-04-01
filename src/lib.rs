@@ -1,5 +1,6 @@
 extern crate lv2rs as lv2;
 
+use lv2::atom::atom::*;
 use lv2::atom::ports::AtomInputPort;
 use lv2::atom::prelude::*;
 use lv2::atom::sequence::TimeStamp;
@@ -90,7 +91,7 @@ impl Plugin for Midigate {
         let null_input = &self.null.as_slice()[0..(n_samples as usize)];
         let audio_output = unsafe { self.out_port.as_slice(n_samples) }.unwrap();
 
-        for (time_stamp, midi_event) in events_atom.iter(&mut self.urid_map).unwrap() {
+        for (time_stamp, midi_event) in events_atom.iter(&mut self.urid_map) {
             let midi_event = match midi_event.cast::<RawMidiMessage>(&mut self.urid_map) {
                 Ok(midi_event) => midi_event,
                 Err(_) => continue,
