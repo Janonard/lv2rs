@@ -1,5 +1,6 @@
 use crate::message::*;
 use lv2rs_atom::prelude::*;
+use lv2rs_atom::atom::*;
 use lv2rs_urid::CachedMap;
 use std::ffi::CStr;
 use ux::*;
@@ -187,13 +188,10 @@ impl<'a> AtomBody for RawMidiMessage {
     unsafe fn widen_ref<'b>(
         header: &'b AtomHeader,
         _urids: &mut CachedMap,
-    ) -> Result<&'b Atom<Self>, ()> {
+    ) -> Result<&'b Atom<Self>, WidenRefError> {
         let size: usize = header.size as usize;
         let fat_ptr: (*const AtomHeader, usize) = (header, size);
         let fat_ptr: *const Atom<Self> = std::mem::transmute(fat_ptr);
-        match fat_ptr.as_ref() {
-            Some(atom_ref) => Ok(atom_ref),
-            None => Err(()),
-        }
+        Ok(fat_ptr.as_ref().unwrap())
     }
 }
