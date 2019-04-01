@@ -78,7 +78,6 @@ pub mod vector;
 
 /// Re-exportation module that contains all traits necessary to use lv2rs-atom.
 pub mod prelude {
-    pub use crate::atom::{Atom, AtomBody, AtomHeader};
     pub use crate::frame::{WritingFrame, WritingFrameExt};
     pub use crate::scalar::ScalarAtomBody;
 

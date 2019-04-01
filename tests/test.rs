@@ -1,6 +1,7 @@
 extern crate lv2rs_atom as atom;
 extern crate lv2rs_urid as urid;
 
+use atom::atom::*;
 use atom::ports::*;
 use atom::prelude::*;
 use std::ffi::CStr;
