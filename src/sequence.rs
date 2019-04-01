@@ -12,19 +12,11 @@ pub enum TimeUnit {
 }
 
 impl TimeUnit {
-    pub fn try_from_urid(urid: URID, urids: &mut urid::CachedMap) -> Result<TimeUnit, ()> {
-        if urid == 0 {
-            Ok(TimeUnit::Frames)
-        } else if urid
-            == urids.map(unsafe { CStr::from_bytes_with_nul_unchecked(uris::BEAT_TIME_URI) })
-        {
-            Ok(TimeUnit::Beats)
-        } else if urid
-            == urids.map(unsafe { CStr::from_bytes_with_nul_unchecked(uris::FRAME_TIME_URI) })
-        {
-            Ok(TimeUnit::Frames)
+    pub fn from_urid(urid: URID, urids: &mut urid::CachedMap) -> TimeUnit {
+        if urid == urids.map(unsafe { CStr::from_bytes_with_nul_unchecked(uris::BEAT_TIME_URI) }) {
+            TimeUnit::Beats
         } else {
-            Err(())
+            TimeUnit::Frames
         }
     }
 
@@ -130,9 +122,9 @@ impl Atom<Sequence> {
     pub fn iter<'a>(
         &'a self,
         urids: &mut urid::CachedMap,
-    ) -> Result<impl Iterator<Item = (TimeStamp, &'a Atom<Unknown>)>, ()> {
-        let time_unit = TimeUnit::try_from_urid(self.body.header.unit, urids)?;
-        Ok(ChunkIterator::new(&self.body.data)
+    ) -> impl Iterator<Item = (TimeStamp, &'a Atom<Unknown>)> {
+        let time_unit = TimeUnit::from_urid(self.body.header.unit, urids);
+        ChunkIterator::new(&self.body.data)
             .map(
                 move |(raw_stamp, chunk): (&'a RawTimeStamp, &'a Atom<Unknown>)|
                     -> (TimeStamp, &'a Atom<Unknown>)
@@ -144,7 +136,6 @@ impl Atom<Sequence> {
                     (stamp, chunk)
                 }
             )
-        )
     }
 }
 
@@ -158,8 +149,7 @@ pub trait SequenceWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, Seque
         // Retrieving the time unit of the sequence.
         let header_unit: TimeUnit = {
             let atom = unsafe { self.get_atom(urids) }.unwrap();
-            TimeUnit::try_from_urid(atom.body.header.unit, urids)
-                .expect("Illegal time unit in atom sequence header")
+            TimeUnit::from_urid(atom.body.header.unit, urids)
         };
 
         if header_unit != time.get_unit() {

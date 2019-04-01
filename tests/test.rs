@@ -258,7 +258,7 @@ fn test_sequence() {
 
     // Reading.
     let atom = unsafe { in_port.get_atom(&mut urids) }.unwrap();
-    let mut sequence_iter = atom.iter(&mut urids).unwrap();
+    let mut sequence_iter = atom.iter(&mut urids);
 
     let (time_stamp, integer) = sequence_iter.next().unwrap();
     assert_eq!(TimeStamp::Frames(0), time_stamp);
