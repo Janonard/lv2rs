@@ -33,8 +33,10 @@ impl Plugin for ExAmp {
     }
 
     fn run(&mut self, n_samples: u32) {
-        let input = unsafe { self.input.as_slice(n_samples) }.unwrap();
-        let output = unsafe { self.output.as_slice(n_samples) }.unwrap();
+        let input = unsafe { self.input.as_slice(n_samples) }.unwrap().iter();
+        let output = unsafe { self.output.as_slice(n_samples) }
+            .unwrap()
+            .iter_mut();
         let gain = *(unsafe { self.gain.get() }.unwrap());
 
         let coef = if gain > -90.0 {
@@ -43,9 +45,9 @@ impl Plugin for ExAmp {
             0.0
         };
 
-        for (i_frame, o_frame) in input.iter().zip(output.iter_mut()) {
-            *o_frame = coef * i_frame;
-        }
+        input
+            .zip(output)
+            .for_each(|(i_frame, o_frame)| *o_frame = *i_frame * coef);
     }
 }
 
