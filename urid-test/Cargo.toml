@@ -1,0 +1,12 @@
+[package]
+name = "urid-test"
+version = "0.1.0"
+authors = ["Janonard <janonard@protonmail.com>"]
+edition = "2018"
+
+[dependencies]
+lv2rs-core = { git = "https://github.com/Janonard/lv2rs-core.git" }
+lv2rs-urid = { path = ".." }
+
+[lib]
+crate-type = ["dylib"]
