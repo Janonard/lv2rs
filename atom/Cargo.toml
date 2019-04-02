@@ -5,4 +5,4 @@ authors = ["Janonard <janonard@protonmail.com>"]
 edition = "2018"
 
 [dependencies]
-lv2rs-urid = { git = "https://github.com/Janonard/lv2rs-urid.git" }
+lv2rs-urid = { path = "../urid" }
