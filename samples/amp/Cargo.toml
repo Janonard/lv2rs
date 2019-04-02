@@ -8,4 +8,4 @@ edition = "2018"
 crate-type = ["dylib"]
 
 [dependencies]
-lv2rs = { git = "https://github.com/Janonard/lv2rs.git" }
+lv2rs = { path = "../.." }
