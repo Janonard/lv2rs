@@ -1,0 +1,8 @@
+[package]
+name = "lv2rs-atom"
+version = "0.1.0"
+authors = ["Janonard <janonard@protonmail.com>"]
+edition = "2018"
+
+[dependencies]
+lv2rs-urid = { git = "https://github.com/Janonard/lv2rs-urid.git" }
