@@ -22,4 +22,5 @@ members = [
     "midi",
     "urid",
     "samples/amp",
+    "samples/midigate",
 ]
