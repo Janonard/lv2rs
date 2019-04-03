@@ -21,6 +21,4 @@ members = [
     "core",
     "midi",
     "urid",
-    "samples/amp",
-    "samples/midigate",
 ]
