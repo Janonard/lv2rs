@@ -2,9 +2,13 @@
 name = "lv2rs-midi"
 version = "0.1.0"
 authors = ["Janonard <janonard@protonmail.com>"]
+license = "ISC"
+readme = "README.md"
+repository = "https://github.com/Janonard/lv2rs"
+description = "Rust re-implementation of the LV2 midi library"
 edition = "2018"
 
 [dependencies]
-lv2rs-atom = { path = "../atom" }
-lv2rs-urid = { path = "../urid" }
+lv2rs-atom = "0.1.0"
+lv2rs-urid = "0.2.0"
 ux = "0.1.3"
