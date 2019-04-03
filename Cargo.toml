@@ -10,12 +10,6 @@ description = "Rust re-implementation of the LV2 libraries"
 edition = "2018"
 
 [dependencies]
-lv2rs-core = "0.3.0"
-lv2rs-urid = "0.2.0"
-lv2rs-atom = "0.1.0"
-lv2rs-midi = "0.1.0"
-
-[patch.crates-io]
 lv2rs-core = { path = "core" }
 lv2rs-urid = { path = "urid" }
 lv2rs-atom = { path = "atom" }

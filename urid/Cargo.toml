@@ -9,4 +9,4 @@ description = "Rust re-implementation of the LV2 core library"
 edition = "2018"
 
 [dependencies]
-lv2rs-core = "0.3.0"
+lv2rs-core = { path = "../core" }
