@@ -7,7 +7,7 @@
 //! copy the data and after that call, the string can't be modified.
 //!
 //! This module contains also a special method for `Atom<AtomString>`:
-//! [`as_cstr`](../atom/struct.Atom.html#method.as_cstr). It let's you access the string quickly!
+//! [`as_cstr`](type.AtomString.html#method.as_cstr). It let's you access the string quickly!
 //!
 //! An example:
 //!
@@ -105,11 +105,11 @@ impl AtomBody for AtomString {
     }
 }
 
-impl Atom<AtomString> {
+impl AtomString {
     /// Try to wrap the string into a `CStr` reference.
     ///
     /// This function returns an error if the internal conversion fails.
     pub fn as_cstr(&self) -> Result<&CStr, std::ffi::FromBytesWithNulError> {
-        CStr::from_bytes_with_nul(unsafe { std::mem::transmute::<&[i8], &[u8]>(&self.body.data) })
+        CStr::from_bytes_with_nul(unsafe { std::mem::transmute::<&[i8], &[u8]>(&self.data) })
     }
 }

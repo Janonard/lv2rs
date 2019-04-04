@@ -9,11 +9,10 @@
 //! the crate's prelude. You can, therefore, act as if the extended method were normal methods of a
 //! writing frame.
 //!
-//! Reading the vector is done using special methods for the [`Atom`](../atom/struct.Atom.html)
-//! struct:
-//! * [`child_body_size`](../atom/struct.Atom.html#method.child_body_size)
-//! * [`child_body_type`](../atom/struct.Atom.html#method.child_body_type)
-//! * [`as_slice`](../atom/struct.Atom.html#method.as_slice)
+//! Reading the vector is done using these methods:
+//! * [`child_body_size`](type.Vector.html#method.child_body_size)
+//! * [`child_body_type`](type.Vector.html#method.child_body_type)
+//! * [`as_slice`](type.Vector.html#method.as_slice)
 //!
 //! An example:
 //!
@@ -146,25 +145,25 @@ where
     }
 }
 
-impl<T> Atom<Vector<T>>
+impl<T> Vector<T>
 where
     T: 'static + AtomBody + Sized + Copy,
 {
     /// Return the size of the child type, according to the vector's body header.
     pub fn child_body_size(&self) -> usize {
-        self.body.header.child_size as usize
+        self.header.child_size as usize
     }
 
     /// Return the type of the child, according to the vector's body header.
     pub fn child_body_type(&self) -> URID {
-        self.body.header.child_type
+        self.header.child_type
     }
 
     /// Return a slice containing all items in the vector.
     ///
     /// No allocation is done; This method simply borrows the data of the vector.
     pub fn as_slice(&self) -> &[T] {
-        &self.body.data
+        &self.data
     }
 }
 

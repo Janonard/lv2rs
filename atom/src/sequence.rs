@@ -118,13 +118,17 @@ impl AtomBody for Sequence {
     }
 }
 
-impl Atom<Sequence> {
+impl Sequence {
+    pub fn time_unit(&self, urids: &mut urid::CachedMap) -> TimeUnit {
+        TimeUnit::from_urid(self.header.unit, urids)
+    }
+
     pub fn iter<'a>(
         &'a self,
         urids: &mut urid::CachedMap,
     ) -> impl Iterator<Item = (TimeStamp, &'a Atom<Unknown>)> {
-        let time_unit = TimeUnit::from_urid(self.body.header.unit, urids);
-        ChunkIterator::new(&self.body.data)
+        let time_unit = TimeUnit::from_urid(self.header.unit, urids);
+        ChunkIterator::new(&self.data)
             .map(
                 move |(raw_stamp, chunk): (&'a RawTimeStamp, &'a Atom<Unknown>)|
                     -> (TimeStamp, &'a Atom<Unknown>)

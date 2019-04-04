@@ -10,7 +10,7 @@
 //! writing frame.
 //!
 //! Reading atoms is done by iterating through all atoms one by one. Iterators are produced by the
-//! [`iter`](../atom/struct.Atom.html#method.iter-2) method.
+//! [`iter`](type.Tuple.html#method.iter) method.
 //!
 //! An example:
 //!
@@ -118,12 +118,12 @@ impl AtomBody for Tuple {
     }
 }
 
-impl Atom<Tuple> {
+impl Tuple {
     /// Create an iterator over all properties of the object.
     ///
     /// This iterator is based on the [`ChunkIterator`](../unknown/struct.ChunkIterator.html).
     pub fn iter(&self) -> impl Iterator<Item = &Atom<Unknown>> {
-        ChunkIterator::<()>::new(&self.body.data).map(|(_, chunk): (&(), &Atom<Unknown>)| chunk)
+        ChunkIterator::<()>::new(&self.data).map(|(_, chunk): (&(), &Atom<Unknown>)| chunk)
     }
 }
 

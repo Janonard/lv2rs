@@ -9,8 +9,8 @@
 //! the crate's prelude. You can, therefore, act as if the extended method were normal methods of a
 //! writing frame.
 //!
-//! You can aquire a literal's data using the [`lang` method](../atom/struct.Atom.html#method.lang)
-//! and the [`as_str` method](../atom/struct.Atom.html#method.as_str).
+//! You can aquire a literal's data using the [`lang` method](type.Literal.html#method.lang)
+//! and the [`as_str` method](type.Literal.html#method.as_str).
 //!
 //! An example:
 //!
@@ -137,18 +137,18 @@ impl AtomBody for Literal {
     }
 }
 
-impl Atom<Literal> {
+impl Literal {
     /// Try to parse the literal data as a `&str`
     ///
     /// Parsing errors are forwarded.
     pub fn as_str(&self) -> Result<&str, std::str::Utf8Error> {
-        let bytes = &self.body.data;
+        let bytes = &self.data;
         std::str::from_utf8(bytes)
     }
 
     /// Return the language of the literal.
     pub fn lang(&self) -> URID {
-        self.body.header.lang
+        self.header.lang
     }
 }
 

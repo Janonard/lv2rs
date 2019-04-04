@@ -11,7 +11,7 @@
 //! writing frame.
 //!
 //! Reading an object is accomplished by creating an iterator over the properties with the
-//! [`iter`](../atom/struct.Atom.html#method.iter) method.
+//! [`iter`](type.Object.html#method.iter) method.
 //!
 //! An example:
 //!
@@ -190,12 +190,12 @@ impl AtomBody for Object {
     }
 }
 
-impl Atom<Object> {
+impl Object {
     /// Create an iterator over all properties of the object.
     ///
     /// This iterator is based on the [`ChunkIterator`](../unknown/struct.ChunkIterator.html).
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = (&'a PropertyHeader, &'a Atom<Unknown>)> {
-        ChunkIterator::<PropertyHeader>::new(&self.body.data)
+        ChunkIterator::<PropertyHeader>::new(&self.data)
     }
 }
 
