@@ -115,7 +115,9 @@ impl<'a, H: 'static + Sized> Iterator for ChunkIterator<'a, H> {
         use std::mem::size_of;
 
         // pad to the next 64-bit aligned position.
-        self.position += self.position % 8;
+        if self.position % 8 != 0 {
+            self.position += 8 - self.position % 8;
+        }
         if self.position >= self.data.len() {
             return None;
         }
