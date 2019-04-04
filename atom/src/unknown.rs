@@ -146,3 +146,88 @@ impl<'a, H: 'static + Sized> Iterator for ChunkIterator<'a, H> {
         Some((pre_header, chunk))
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::atom::*;
+    use crate::unknown::ChunkIterator;
+
+    #[test]
+    fn test_chunk_iterator() {
+        struct TestPrefix {
+            value: u64,
+        }
+
+        // ##################
+        // creating the data.
+        // ##################
+        let mut data = Box::new([0u8; 256]);
+        let ptr = data.as_mut().as_mut_ptr();
+
+        // First prefix.
+        let mut ptr = ptr as *mut TestPrefix;
+        unsafe {
+            let mut_ref = ptr.as_mut().unwrap();
+            mut_ref.value = 650000;
+            // No padding needed, TestPrefix is eight bytes long.
+            ptr = ptr.add(1);
+        }
+
+        // First atom (Let's just assume that Atom<u8> exists, because it requires seven bytes of
+        // padding, which is an important edge case).
+        let mut ptr = ptr as *mut AtomHeader;
+        unsafe {
+            let mut_ref = ptr.as_mut().unwrap();
+            mut_ref.atom_type = 42;
+            mut_ref.size = 1;
+            ptr = ptr.add(1);
+        }
+        let mut ptr = ptr as *mut u8;
+        unsafe {
+            let mut_ref = ptr.as_mut().unwrap();
+            *mut_ref = 17;
+            ptr = ptr.add(1);
+        }
+
+        // Padding and second prefix.
+        let mut ptr = unsafe { ptr.add(7) } as *mut TestPrefix;
+        unsafe {
+            let mut_ref = ptr.as_mut().unwrap();
+            mut_ref.value = 4711;
+            // No padding needed, TestPrefix is eight bytes long.
+            ptr = ptr.add(1);
+        }
+
+        // Second atom.
+        let ptr = ptr as *mut Atom<u32>;
+        unsafe {
+            let mut_ref = ptr.as_mut().unwrap();
+            mut_ref.header.atom_type = 10;
+            mut_ref.header.size = 4;
+            mut_ref.body = 4;
+        }
+
+        // #####################
+        // Testing the iterator.
+        // #####################
+        let mut iter: ChunkIterator<TestPrefix> = ChunkIterator::new(data.as_ref());
+
+        // First atom
+        let (prefix, atom) = iter.next().unwrap();
+        assert_eq!(650000, prefix.value);
+        assert_eq!(42, atom.header.atom_type);
+        assert_eq!(1, atom.header.size);
+        assert_eq!(17, atom.body[0]);
+
+        // Second atom.
+        let (prefix, atom) = iter.next().unwrap();
+        assert_eq!(4711, prefix.value);
+        assert_eq!(10, atom.header.atom_type);
+        assert_eq!(4, atom.header.size);
+        assert_eq!(4, *unsafe {
+            (atom.body.as_ref().as_ptr() as *const u32)
+                .as_ref()
+                .unwrap()
+        });
+    }
+}
