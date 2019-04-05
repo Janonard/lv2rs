@@ -3,11 +3,8 @@
 //! This module contains the [`AtomString`](type.AtomString.html), an atom representing standard
 //! ASCII strings.
 //!
-//! Atom strings can only be written once: The `write_atom` call expects a CStr from which it can
+//! Atom strings can only be written once: The `write_atom_body` call expects a CStr from which it can
 //! copy the data and after that call, the string can't be modified.
-//!
-//! This module contains also a special method for `Atom<AtomString>`:
-//! [`as_cstr`](type.AtomString.html#method.as_cstr). It let's you access the string quickly!
 //!
 //! An example:
 //!
@@ -56,7 +53,7 @@
 //!     // Creating the atom space.
 //!     let mut atom_space = vec![0u8; 256];
 //!     let atom = unsafe { (atom_space.as_mut_ptr() as *mut Atom).as_mut() }.unwrap();
-//!     atom.size = 256 - 8;
+//!     *(atom.mut_size()) = 256 - 8;
 //!
 //!     // Connecting the ports.
 //!     plugin.in_port.connect_port(atom as &Atom);
@@ -68,6 +65,7 @@ use crate::atom::{array::*, *};
 use crate::frame::{WritingFrame, WritingFrameExt};
 use crate::uris;
 use std::ffi::CStr;
+
 /// ASCII String.
 ///
 /// See the [module documentation](index.html) for more information.
@@ -97,7 +95,7 @@ impl AtomBody for AtomString {
         Ok(())
     }
 
-    unsafe fn create_ref<'a>(raw_data: &'a [u8]) -> Result<&'a Self, ()> {
+    fn create_ref<'a>(raw_data: &'a [u8]) -> Result<&'a Self, ()> {
         Self::__create_ref(raw_data)
     }
 }

@@ -5,39 +5,75 @@ use std::marker::PhantomData;
 use std::os::raw::c_int;
 use urid::URID;
 
-/// Generic type combining an atom header with a body.
+/// Marker or header of an atom data structure.
 ///
-/// This type is mostly used to interpret immutable references to atoms. Mutable references to atoms
-/// appear rarely since one can set type and size to invalid numbers and owning atoms is even
-/// rarer since most atoms are dynamically sized types (DSTs).
-///
-/// However, it is very handy for immutable references and many reading methods work directly on it.
-/// The `Atom` struct is also used to interpret atom pointers from C, since it is  `repr(C)`
+/// This type is used to interpret data coming from the host or other plugins. It is always written
+/// in the beginning of a data packet and denotes the size of the packet and it's type.
 #[repr(C)]
 pub struct Atom {
-    pub size: c_int,
-    pub atom_type: URID,
+    size: c_int,
+    atom_type: URID,
 }
 
 impl Atom {
-    /// Return the size of the body, as noted in the header.
-    pub fn body_size(&self) -> usize {
+    /// Return the size of the body.
+    pub fn size(&self) -> usize {
         self.size as usize
     }
 
-    /// Return the type of the body, as noted in the header.
-    pub fn body_type(&self) -> URID {
+    /// Return a mutable reference to the body size.
+    pub fn mut_size(&mut self) -> &mut i32 {
+        &mut self.size
+    }
+
+    /// Return the type of the body.
+    pub fn atom_type(&self) -> URID {
         self.atom_type
     }
 
-    pub unsafe fn get_raw_body(&self) -> &[u8] {
-        std::slice::from_raw_parts(
-            (self as *const Atom).add(1) as *const u8,
-            self.size as usize,
-        )
+    // Return a mutable reference to the atom body type.
+    pub fn mut_atom_type(&mut self) -> &mut URID {
+        &mut self.atom_type
     }
 
-    pub unsafe fn get_body<A: AtomBody + ?Sized>(
+    /// Write an empty header to a writing frame.
+    ///
+    /// This function is for internal use and you should not use it externally. Since it does not
+    /// check what's around it, this function may invalidate the written atom structure. This is
+    /// also the reason why it's unsafe.
+    pub unsafe fn write_empty_header<
+        'a,
+        W: WritingFrame<'a> + WritingFrameExt<'a, A>,
+        A: AtomBody + ?Sized,
+    >(
+        frame: &mut W,
+        atom_type: URID,
+    ) -> Result<&'a mut Self, ()> {
+        let atom = Atom {
+            size: 0,
+            atom_type: atom_type,
+        };
+        frame.write_sized(&atom)
+    }
+
+    /// Return a slice of bytes containing the data.
+    ///
+    /// The returned slice will start directly after the atom and will have the size noted in the
+    /// header.
+    pub fn get_raw_body(&self) -> &[u8] {
+        unsafe {
+            std::slice::from_raw_parts(
+                (self as *const Atom).add(1) as *const u8,
+                self.size as usize,
+            )
+        }
+    }
+
+    /// Try the return a reference to the body.
+    ///
+    /// This function fails if a) the type URID in the atom does not match with A's URID or b)
+    /// the internal casting function tells that the data is malformed.
+    pub fn get_body<A: AtomBody + ?Sized>(
         &self,
         urids: &mut urid::CachedMap,
     ) -> Result<&A, GetBodyError> {
@@ -49,7 +85,7 @@ impl Atom {
     }
 }
 
-/// Errors that may occur when calling [`AtomBody::widen_ref`](trait.AtomBody.html#tymethod.widen_ref).
+/// Errors that may occur when calling [`Atom::get_body`](trait.Atom.html#method.get_body).
 #[derive(Debug)]
 pub enum GetBodyError {
     /// The URID noted in the atom header is wrong.
@@ -58,7 +94,7 @@ pub enum GetBodyError {
     WrongURID,
     /// The atom is malformed.
     ///
-    /// You can't do much about it; This is the fault of other plugins.
+    /// You can't do much about it; This is another plugin's fault.
     MalformedAtom,
 }
 
@@ -72,7 +108,7 @@ pub enum GetBodyError {
 /// First of all, you shouldn't. The set of included atom bodies is enough to express almost any
 /// information. On the other hand, if you really need to implement a new atom body, just implement
 /// this trait. This will give you most of the features you will need. However, this trait only
-/// lets you initialize a body. It does not give you means to extend it afterwards. If you want to
+/// lets you initialize a body; It does not give you means to extend it afterwards. If you want to
 /// do that, you should create an extension trait for [`WritingFrame`s](../frame/trait.WritingFrame.html),
 /// just like the [`TupleWritingFrame`](../tuple/trait.TupleWritingFrame.html).
 pub trait AtomBody {
@@ -90,17 +126,18 @@ pub trait AtomBody {
     ///
     /// Implementors should use the writing frame to write out general information about the atom,
     /// like body-specific headers or, in the case of scalars, the value itself. Please note that
-    /// * The [`AtomHeader`](struct.AtomHeader.html) was already written, you do not need to write
+    /// * The [`Atom`](struct.Atom.html) was already written, you do not need to write
     /// it yourself.
     /// * You cannot alter the data after it was written. Once this method call is over, you only have
-    /// reading access to it by using the [`get_atom`](../frame/trait.WritingFrameExt.html#method.get_atom)
-    /// method of the writing frame.
+    /// reading access to it by using the
+    /// [`get_atom_body`](../frame/trait.WritingFrameExt.html#method.get_atom_body) method of the
+    /// writing frame.
     /// * The result must be a valid atom. You may not rely on future calls to make it valid.
     /// * In most cases, you don't need to include padding. If padding is required, the writer will
     /// include it when it is dropped.
     /// * You do not need (and definitely should not try) to update the atom header for the new
     /// size. The writer will keep track of that.
-    /// * Your implementation should be implemented in a way that it can only return `Err` in cases
+    /// * Your implementation should work in a way that it can only return `Err` in cases
     /// of insufficient memory.
     ///
     /// This method is unsafe since it can tamper if the integrity of the atom structure, for example
@@ -113,13 +150,11 @@ pub trait AtomBody {
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>;
 
-    /// Try to create a `Self` reference from an atom header.
+    /// Try to create a `Self` reference from a slice of raw data.
     ///
-    /// Also, this method is unsafe since you can not check if the memory space after the header is
-    /// actually allocated. Therefore, this method could have undefined behaviour. However, you can
-    /// assume that the size in the header is valid, since you cannot defend yourself from the
-    /// opposite.
-    unsafe fn create_ref<'a>(raw_body: &'a [u8]) -> Result<&'a Self, ()>;
+    /// When implementing, you have to check if the data makes up a valid object of your type. If
+    /// this is not the case, return an `Err`.
+    fn create_ref<'a>(raw_body: &'a [u8]) -> Result<&'a Self, ()>;
 }
 
 /// Iterator over atoms.
@@ -133,7 +168,7 @@ pub struct AtomIterator<'a, H: 'static + Sized> {
 }
 
 impl<'a, H: 'static + Sized> AtomIterator<'a, H> {
-    /// Create a new chunk iterator.
+    /// Create a new atom iterator.
     pub fn new(data: &'a [u8]) -> Self {
         AtomIterator {
             data: data,
@@ -252,14 +287,14 @@ mod test {
         assert_eq!(650000, prefix.value);
         assert_eq!(42, atom.atom_type);
         assert_eq!(1, atom.size);
-        assert_eq!(17, unsafe { atom.get_raw_body() }[0]);
+        assert_eq!(17, atom.get_raw_body()[0]);
 
         // Second atom.
         let (prefix, atom) = iter.next().unwrap();
         assert_eq!(4711, prefix.value);
         assert_eq!(10, atom.atom_type);
         assert_eq!(1, atom.size);
-        assert_eq!(4, unsafe { atom.get_raw_body() }[0]);
+        assert_eq!(4, atom.get_raw_body()[0]);
     }
 }
 
@@ -304,11 +339,11 @@ pub mod array {
         }
     }
 
-    /// Abstract type for dynamically sized atoms.
+    /// Abstract type for dynamically sized atom bodies.
     ///
-    /// Many dynamically sized atoms share a lot of their behaviour as well as their raw
-    /// representation. Therefore, they are abstracted to this struct that contains a header and
-    /// an array of sized items.
+    /// Many dynamically sized atoms bodies have a lot of their behaviour and raw representation in
+    /// common. Therefore, they are abstracted to this struct that contains a header and an array of
+    /// sized items.
     ///
     /// If you don't want to have a header, you can use `()` instead.
     ///
@@ -346,16 +381,14 @@ pub mod array {
         }
 
         /// Internal method to create an atom body reference.
-        ///
-        /// This method will check if the type URID is correct and if the size is big enough to
-        /// contain the body header. The rest of the size will be interpreted as data.
-        pub unsafe fn __create_ref<'a>(raw_data: &'a [u8]) -> Result<&'a Self, ()> {
+        pub fn __create_ref<'a>(raw_data: &'a [u8]) -> Result<&'a Self, ()> {
             let array_header_size = size_of::<H>();
             if raw_data.len() < array_header_size {
                 return Err(());
             }
 
             let tail_size = raw_data.len() - size_of::<H>();
+            // The size of the tail has to be a multiple of the contained type.
             if tail_size % size_of::<T>() != 0 {
                 return Err(());
             }
@@ -364,8 +397,7 @@ pub mod array {
             // This is were the unsafe things happen!
             // We know the length of the string, therefore we can create a fat pointer to the atom.
             let self_ptr: (*const u8, usize) = (raw_data.as_ptr(), tail_len);
-            let self_ptr: *const Self = transmute(self_ptr);
-            let self_ref: &Self = self_ptr.as_ref().unwrap();
+            let self_ref: &Self = unsafe { transmute(self_ptr) };
 
             Ok(self_ref)
         }

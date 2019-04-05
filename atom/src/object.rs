@@ -94,7 +94,7 @@
 //!     // Creating the atom space.
 //!     let mut atom_space = vec![0u8; 256];
 //!     let atom = unsafe { (atom_space.as_mut_ptr() as *mut Atom).as_mut() }.unwrap();
-//!     atom.size = 256 - 8;
+//!     *(atom.mut_size()) = 256 - 8;
 //!
 //!     // Connecting the ports.
 //!     plugin.in_port.connect_port(atom as &Atom);
@@ -111,7 +111,7 @@ use urid::URID;
 /// The header of an object's property.
 ///
 /// In original LV2, a property is a standalone atom, but since it is only useful within objects,
-/// which don't need the atom properties of a property, it is not an atom.
+/// which doesn't need the atom properties of a property, it is not an atom.
 ///
 /// The `key` represents the name of the property. The `context` is described by the standard as
 /// "Context URID (may be, and generally is, 0)". It does not really say what it is used for,
@@ -181,7 +181,7 @@ impl AtomBody for Object {
         Self::__initialize_body(writer, &(*id, *otype), urids)
     }
 
-    unsafe fn create_ref<'a>(raw_body: &'a [u8]) -> Result<&'a Self, ()> {
+    fn create_ref<'a>(raw_body: &'a [u8]) -> Result<&'a Self, ()> {
         Self::__create_ref(raw_body)
     }
 }

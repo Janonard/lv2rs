@@ -62,7 +62,7 @@
 //!     // Creating the atom space.
 //!     let mut atom_space = vec![0u8; 256];
 //!     let atom = unsafe { (atom_space.as_mut_ptr() as *mut Atom).as_mut() }.unwrap();
-//!     atom.size = 256 - 8;
+//!     *(atom.mut_size()) = 256 - 8;
 //!
 //!     // Connecting the ports.
 //!     plugin.in_port.connect_port(atom as &Atom);
@@ -136,7 +136,7 @@ where
         Self::__initialize_body(writer, &urids.map(T::get_uri()), urids)
     }
 
-    unsafe fn create_ref<'a>(raw_data: &'a [u8]) -> Result<&'a Self, ()> {
+    fn create_ref<'a>(raw_data: &'a [u8]) -> Result<&'a Self, ()> {
         Self::__create_ref(raw_data)
     }
 }

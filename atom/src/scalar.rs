@@ -56,7 +56,7 @@
 //!     // Creating the atom space.
 //!     let mut atom_space = vec![0u8; 256];
 //!     let atom = unsafe { (atom_space.as_mut_ptr() as *mut Atom).as_mut() }.unwrap();
-//!     atom.size = 256 - 8;
+//!     *(atom.mut_size()) = 256 - 8;
 //!
 //!     // Connecting the ports.
 //!     plugin.in_port.connect_port(atom as &Atom);
@@ -98,9 +98,10 @@ where
         Ok(())
     }
 
-    unsafe fn create_ref<'a>(raw_body: &'a [u8]) -> Result<&'a Self, ()> {
+    fn create_ref<'a>(raw_body: &'a [u8]) -> Result<&'a Self, ()> {
         if raw_body.len() == std::mem::size_of::<Self>() {
-            Ok((raw_body.as_ptr() as *const Self).as_ref().unwrap())
+            let ptr = raw_body.as_ptr() as *const Self;
+            Ok(unsafe { ptr.as_ref() }.unwrap())
         } else {
             Err(())
         }

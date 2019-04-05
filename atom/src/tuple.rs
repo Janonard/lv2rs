@@ -79,7 +79,7 @@
 //!     // Creating the atom space.
 //!     let mut atom_space = vec![0u8; 256];
 //!     let atom = unsafe { (atom_space.as_mut_ptr() as *mut Atom).as_mut() }.unwrap();
-//!     atom.size = 256 - 8;
+//!     *(atom.mut_size()) = 256 - 8;
 //!
 //!     // Connecting the ports.
 //!     plugin.in_port.connect_port(atom as &Atom);
@@ -115,7 +115,7 @@ impl AtomBody for Tuple {
         Self::__initialize_body(writer, parameter, urids)
     }
 
-    unsafe fn create_ref<'a>(raw_data: &'a [u8]) -> Result<&'a Self, ()> {
+    fn create_ref<'a>(raw_data: &'a [u8]) -> Result<&'a Self, ()> {
         Self::__create_ref(raw_data)
     }
 }
@@ -123,7 +123,7 @@ impl AtomBody for Tuple {
 impl Tuple {
     /// Create an iterator over all properties of the object.
     ///
-    /// This iterator is based on the [`ChunkIterator`](../unknown/struct.ChunkIterator.html).
+    /// This iterator is based on the [`AtomIterator`](../atom/struct.AtomIterator.html).
     pub fn iter(&self) -> impl Iterator<Item = &Atom> {
         AtomIterator::<()>::new(&self.data).map(|(_, chunk): (&(), &Atom)| chunk)
     }
@@ -137,7 +137,7 @@ pub trait TupleWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, Tuple> {
     /// Add a new atom to the tuple.
     ///
     /// This method acts just like an output port's
-    /// [`write_atom`](../ports/struct.AtomOutputPort.html#method.write_atom): It receives the
+    /// [`write_atom_body`](../ports/struct.AtomOutputPort.html#method.write_atom_body): It receives the
     /// initialization parameter of a atom, creates a new writing frame, initializes the atom and
     /// returns the frame.
     fn push_atom<'b, A: AtomBody + ?Sized>(

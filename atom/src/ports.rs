@@ -12,7 +12,7 @@ pub struct AtomOutputPort<A: AtomBody + ?Sized> {
     phantom: PhantomData<A>,
 }
 
-/// Errors that may occur when calling [`AtomOutputPort::write_atom`](struct.AtomOuputPort.html#method.write_atom)
+/// Errors that may occur when calling [`AtomOutputPort::write_atom_body`](struct.AtomOuputPort.html#method.write_atom_body)
 #[derive(Debug)]
 pub enum WriteAtomError {
     /// The internal pointer points to zero.
@@ -24,7 +24,7 @@ pub enum WriteAtomError {
 }
 
 #[derive(Debug)]
-/// Error that may occur when calling [`AtomInputPort::get_atom`](struct.AtomInputPort.html#method.get_atom).
+/// Error that may occur when calling [`AtomInputPort::get_atom_body`](struct.AtomInputPort.html#method.get_atom_body).
 pub enum GetAtomError {
     /// The internal pointer points to zero.
     ///
@@ -38,7 +38,7 @@ impl<A: AtomBody + ?Sized> AtomOutputPort<A> {
     /// Create a new port.
     ///
     /// Please note that the newly created port wil point to null and therefore,
-    /// [`write_atom`](#method.write_atom) will yield undefined behaviour.
+    /// [`write_atom_body`](#method.write_atom_body) will yield undefined behaviour.
     pub fn new() -> Self {
         Self {
             atom: null_mut(),
@@ -57,10 +57,8 @@ impl<A: AtomBody + ?Sized> AtomOutputPort<A> {
     /// Write an atom to the internal atom pointer.
     ///
     /// This method will create a [`RootFrame`](../frame/struct.RootFrame.html) and initialize the
-    /// body a `Atom<A>`. For [scalar atoms](../scalar/index.html), this is all you can and need to
+    /// body. For [scalar atoms](../scalar/index.html), this is all you can and need to
     /// do. For all other atoms, you can write additional data using the `RootFrame`.
-    ///
-    /// If the host doesn't provide enough space to write the atom, an `Err` will be returned.
     ///
     /// This method is unsafe since it dereferences the raw, internal pointer and therefore could
     /// yield undefined behaviour. Make sure that your plugin's `connect_port` method calls this
@@ -74,7 +72,7 @@ impl<A: AtomBody + ?Sized> AtomOutputPort<A> {
             Some(header) => header,
             None => return Err(WriteAtomError::NullPointer),
         };
-        let data = std::slice::from_raw_parts_mut(self.atom as *mut u8, header.size as usize);
+        let data = std::slice::from_raw_parts_mut(self.atom as *mut u8, header.size() as usize);
         let mut frame =
             RootFrame::new(data, urids).map_err(|_| WriteAtomError::InsufficientSpace)?;
         A::initialize_body(&mut frame, parameter, urids)
@@ -93,7 +91,7 @@ impl<A: AtomBody + ?Sized> AtomInputPort<A> {
     /// Create a new port.
     ///
     /// Please note that the newly created port wil point to null and therefore,
-    /// [`write_atom`](#method.write_atom) will yield undefined behaviour.
+    /// [`write_atom_body`](#method.write_atom_body) will yield undefined behaviour.
     pub fn new() -> Self {
         Self {
             atom: null(),
@@ -110,9 +108,6 @@ impl<A: AtomBody + ?Sized> AtomInputPort<A> {
     }
 
     /// Dereference the internal raw pointer to an atom body reference.
-    ///
-    /// If the internal pointer points to null or if the atom is illformed, this method will return
-    /// an `Err`.
     ///
     /// This method is unsafe since it dereferences the raw, internal pointer and therefore could
     /// yield undefined behaviour. Make sure that your plugin's `connect_port` method calls this

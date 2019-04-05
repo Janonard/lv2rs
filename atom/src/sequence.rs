@@ -109,7 +109,7 @@ impl AtomBody for Sequence {
         Self::__initialize_body(writer, parameter, urids)
     }
 
-    unsafe fn create_ref<'a>(raw_data: &'a [u8]) -> Result<&'a Self, ()> {
+    fn create_ref<'a>(raw_data: &'a [u8]) -> Result<&'a Self, ()> {
         Self::__create_ref(raw_data)
     }
 }
