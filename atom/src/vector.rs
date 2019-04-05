@@ -37,15 +37,14 @@
 //!             // Writing
 //!             {
 //!                 let mut frame =
-//!                     unsafe { self.out_port.write_atom(&(), &mut self.urids) }.unwrap();
+//!                     unsafe { self.out_port.write_atom_body(&(), &mut self.urids) }.unwrap();
 //!                 frame.push(0.0).unwrap();
 //!                 frame.append(&[1.0, 2.0, 3.0, 4.0]).unwrap();
 //!             }
 //!
 //!             // Reading.
-//!             let atom = unsafe { self.in_port.get_atom(&mut self.urids) }.unwrap();
-//!             let data = atom.as_slice();
-//!             assert_eq!([0.0, 1.0, 2.0, 3.0, 4.0], data);
+//!             let vector = unsafe { self.in_port.get_atom_body(&mut self.urids) }.unwrap();
+//!             assert_eq!([0.0, 1.0, 2.0, 3.0, 4.0], vector.as_slice());
 //!         }
 //!     }
 //!
@@ -55,18 +54,18 @@
 //!
 //!     // Creating the plugin.
 //!     let mut plugin = Plugin {
-//!         in_port: AtomInputPort::new(&mut urids),
+//!         in_port: AtomInputPort::new(),
 //!         out_port: AtomOutputPort::new(),
 //!         urids: urids,
 //!     };
 //!
 //!     // Creating the atom space.
 //!     let mut atom_space = vec![0u8; 256];
-//!     let atom = unsafe { (atom_space.as_mut_ptr() as *mut AtomHeader).as_mut() }.unwrap();
+//!     let atom = unsafe { (atom_space.as_mut_ptr() as *mut Atom).as_mut() }.unwrap();
 //!     atom.size = 256 - 8;
 //!
 //!     // Connecting the ports.
-//!     plugin.in_port.connect_port(atom as &AtomHeader);
+//!     plugin.in_port.connect_port(atom as &Atom);
 //!     plugin.out_port.connect_port(atom);
 //!
 //!     // Calling `run`.
@@ -137,11 +136,8 @@ where
         Self::__initialize_body(writer, &urids.map(T::get_uri()), urids)
     }
 
-    unsafe fn widen_ref<'a>(
-        header: &'a AtomHeader,
-        urids: &mut urid::CachedMap,
-    ) -> Result<&'a Atom<Self>, WidenRefError> {
-        Self::__widen_ref(header, urids)
+    unsafe fn create_ref<'a>(raw_data: &'a [u8]) -> Result<&'a Self, ()> {
+        Self::__create_ref(raw_data)
     }
 }
 

@@ -72,7 +72,6 @@ pub mod scalar;
 pub mod sequence;
 pub mod string;
 pub mod tuple;
-pub mod unknown;
 pub mod uris;
 pub mod vector;
 
@@ -84,7 +83,7 @@ pub mod prelude {
     // Atom bodies.
     pub use crate::{
         literal::Literal, object::Object, sequence::Sequence, string::AtomString, tuple::Tuple,
-        unknown::Unknown, vector::Vector,
+        vector::Vector,
     };
 
     // Writing frame extensions

@@ -33,11 +33,11 @@
 //!             let c_message = CStr::from_bytes_with_nul(message.as_bytes()).unwrap();
 //!
 //!             // Writing.
-//!             unsafe { self.out_port.write_atom(c_message, &mut self.urids).unwrap() };
+//!             unsafe { self.out_port.write_atom_body(c_message, &mut self.urids).unwrap() };
 //!
 //!             // Reading.
-//!             let atom = unsafe { self.in_port.get_atom(&mut self.urids) }.unwrap();
-//!             let str = atom.as_cstr().unwrap().to_str().unwrap();
+//!             let string = unsafe { self.in_port.get_atom_body(&mut self.urids) }.unwrap();
+//!             let str = string.as_cstr().unwrap().to_str().unwrap();
 //!             assert_eq!("Hello World!", str);
 //!         }
 //!     }
@@ -48,18 +48,18 @@
 //!
 //!     // Creating the plugin.
 //!     let mut plugin = Plugin {
-//!         in_port: AtomInputPort::new(&mut urids),
+//!         in_port: AtomInputPort::new(),
 //!         out_port: AtomOutputPort::new(),
 //!         urids: urids,
 //!     };
 //!
 //!     // Creating the atom space.
 //!     let mut atom_space = vec![0u8; 256];
-//!     let atom = unsafe { (atom_space.as_mut_ptr() as *mut AtomHeader).as_mut() }.unwrap();
+//!     let atom = unsafe { (atom_space.as_mut_ptr() as *mut Atom).as_mut() }.unwrap();
 //!     atom.size = 256 - 8;
 //!
 //!     // Connecting the ports.
-//!     plugin.in_port.connect_port(atom as &AtomHeader);
+//!     plugin.in_port.connect_port(atom as &Atom);
 //!     plugin.out_port.connect_port(atom);
 //!
 //!     // Calling `run`.
@@ -97,11 +97,8 @@ impl AtomBody for AtomString {
         Ok(())
     }
 
-    unsafe fn widen_ref<'a>(
-        header: &'a AtomHeader,
-        urids: &mut urid::CachedMap,
-    ) -> Result<&'a Atom<Self>, WidenRefError> {
-        Self::__widen_ref(header, urids)
+    unsafe fn create_ref<'a>(raw_data: &'a [u8]) -> Result<&'a Self, ()> {
+        Self::__create_ref(raw_data)
     }
 }
 

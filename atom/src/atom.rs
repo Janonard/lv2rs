@@ -1,36 +1,57 @@
 //! Fundamental type definitions.
 use crate::frame::{WritingFrame, WritingFrameExt};
 use std::ffi::CStr;
+use std::marker::PhantomData;
 use std::os::raw::c_int;
 use urid::URID;
 
-/// General atom type information container.
+/// Generic type combining an atom header with a body.
 ///
-/// An atom header contains the size and the type URID of the atom. You can use this struct to
-/// interpret an atom or atom header pointer from C since it is `repr(C)`.
-#[derive(Clone)]
+/// This type is mostly used to interpret immutable references to atoms. Mutable references to atoms
+/// appear rarely since one can set type and size to invalid numbers and owning atoms is even
+/// rarer since most atoms are dynamically sized types (DSTs).
+///
+/// However, it is very handy for immutable references and many reading methods work directly on it.
+/// The `Atom` struct is also used to interpret atom pointers from C, since it is  `repr(C)`
 #[repr(C)]
-pub struct AtomHeader {
+pub struct Atom {
     pub size: c_int,
     pub atom_type: URID,
 }
 
-impl AtomHeader {
-    /// Try to widen a `AtomHeader` reference to a `Atom` reference.
-    ///
-    /// Also, this method is unsafe since it can not check if the memory space after the header is
-    /// actually allocated. Therefore, this method could have undefined behaviour.
-    pub unsafe fn widen_ref<A: AtomBody + ?Sized>(
+impl Atom {
+    /// Return the size of the body, as noted in the header.
+    pub fn body_size(&self) -> usize {
+        self.size as usize
+    }
+
+    /// Return the type of the body, as noted in the header.
+    pub fn body_type(&self) -> URID {
+        self.atom_type
+    }
+
+    pub unsafe fn get_raw_body(&self) -> &[u8] {
+        std::slice::from_raw_parts(
+            (self as *const Atom).add(1) as *const u8,
+            self.size as usize,
+        )
+    }
+
+    pub unsafe fn get_body<A: AtomBody + ?Sized>(
         &self,
         urids: &mut urid::CachedMap,
-    ) -> Result<&Atom<A>, WidenRefError> {
-        A::widen_ref(self, urids)
+    ) -> Result<&A, GetBodyError> {
+        if self.atom_type != urids.map(A::get_uri()) {
+            return Err(GetBodyError::WrongURID);
+        }
+        let raw_body = self.get_raw_body();
+        A::create_ref(raw_body).map_err(|_| GetBodyError::MalformedAtom)
     }
 }
 
 /// Errors that may occur when calling [`AtomBody::widen_ref`](trait.AtomBody.html#tymethod.widen_ref).
 #[derive(Debug)]
-pub enum WidenRefError {
+pub enum GetBodyError {
     /// The URID noted in the atom header is wrong.
     ///
     /// Maybe you tried to use the wrong atom type?
@@ -92,66 +113,153 @@ pub trait AtomBody {
     where
         W: WritingFrame<'a> + WritingFrameExt<'a, Self>;
 
-    /// Try to widen the header reference to a atom reference.
+    /// Try to create a `Self` reference from an atom header.
     ///
     /// Also, this method is unsafe since you can not check if the memory space after the header is
     /// actually allocated. Therefore, this method could have undefined behaviour. However, you can
     /// assume that the size in the header is valid, since you cannot defend yourself from the
     /// opposite.
-    unsafe fn widen_ref<'a>(
-        header: &'a AtomHeader,
-        urids: &mut urid::CachedMap,
-    ) -> Result<&'a Atom<Self>, WidenRefError>;
+    unsafe fn create_ref<'a>(raw_body: &'a [u8]) -> Result<&'a Self, ()>;
 }
 
-/// Generic type combining an atom header with a body.
+/// Iterator over atoms.
 ///
-/// This type is mostly used to interpret immutable references to atoms. Mutable references to atoms
-/// appear rarely since one can set type and size to invalid numbers and owning atoms is even
-/// rarer since most atoms are dynamically sized types (DSTs).
-///
-/// However, it is very handy for immutable references and many reading methods work directly on it.
-/// The `Atom` struct is also used to interpret atom pointers from C, since it is  `repr(C)`
-#[repr(C)]
-pub struct Atom<A: AtomBody + ?Sized> {
-    pub header: AtomHeader,
-    pub body: A,
+/// This iterator takes a slice of bytes and tries to iterate over all atoms in this slice. If
+/// there is an error while iterating, iteration will end.
+pub struct AtomIterator<'a, H: 'static + Sized> {
+    data: &'a [u8],
+    position: usize,
+    phantom: PhantomData<H>,
 }
 
-impl<A: AtomBody + ?Sized> Atom<A> {
-    /// Return the size of the body, as noted in the header.
-    pub fn body_size(&self) -> usize {
-        self.header.size as usize
-    }
-
-    /// Return the type of the body, as noted in the header.
-    pub fn body_type(&self) -> URID {
-        self.header.atom_type
+impl<'a, H: 'static + Sized> AtomIterator<'a, H> {
+    /// Create a new chunk iterator.
+    pub fn new(data: &'a [u8]) -> Self {
+        AtomIterator {
+            data: data,
+            position: 0,
+            phantom: PhantomData,
+        }
     }
 }
 
-impl<A: AtomBody + ?Sized> std::ops::Deref for Atom<A> {
-    type Target = A;
-    fn deref(&self) -> &A {
-        &self.body
+impl<'a, H: 'static + Sized> Iterator for AtomIterator<'a, H> {
+    type Item = (&'a H, &'a Atom);
+
+    fn next(&mut self) -> Option<(&'a H, &'a Atom)> {
+        use std::mem::size_of;
+
+        // pad to the next 64-bit aligned position, if nescessary.
+        if self.position % 8 != 0 {
+            self.position += 8 - self.position % 8;
+        }
+        if self.position >= self.data.len() {
+            return None;
+        }
+
+        let data = &self.data[self.position..];
+        if data.len() < size_of::<H>() + size_of::<Atom>() {
+            return None;
+        }
+
+        let pre_header_ptr = data.as_ptr() as *const H;
+        let pre_header = unsafe { pre_header_ptr.as_ref() }?;
+        let atom_ptr = unsafe { pre_header_ptr.add(1) } as *const Atom;
+        let atom = unsafe { atom_ptr.as_ref() }?;
+
+        // Apply the package of pre-header, atom and data to our position in the array.
+        self.position += size_of::<H>() + size_of::<Atom>() + atom.size as usize;
+
+        if self.position <= self.data.len() {
+            Some((pre_header, atom))
+        } else {
+            None
+        }
     }
 }
 
-impl<A: AtomBody + ?Sized> std::ops::DerefMut for Atom<A> {
-    fn deref_mut(&mut self) -> &mut A {
-        &mut self.body
-    }
-}
+#[cfg(test)]
+mod test {
+    use crate::atom::*;
 
-impl<'a, A: AtomBody + ?Sized> From<&'a Atom<A>> for &'a AtomHeader {
-    fn from(atom: &'a Atom<A>) -> &'a AtomHeader {
-        unsafe { (atom as *const Atom<A> as *const AtomHeader).as_ref() }.unwrap()
-    }
-}
+    #[test]
+    fn test_chunk_iterator() {
+        struct TestPrefix {
+            value: u64,
+        }
 
-impl<'a, A: AtomBody + ?Sized> From<&'a mut Atom<A>> for &'a mut AtomHeader {
-    fn from(atom: &'a mut Atom<A>) -> &'a mut AtomHeader {
-        unsafe { (atom as *mut Atom<A> as *mut AtomHeader).as_mut() }.unwrap()
+        // ##################
+        // creating the data.
+        // ##################
+        let mut data = Box::new([0u8; 256]);
+        let ptr = data.as_mut().as_mut_ptr();
+
+        // First prefix.
+        let mut ptr = ptr as *mut TestPrefix;
+        unsafe {
+            let mut_ref = ptr.as_mut().unwrap();
+            mut_ref.value = 650000;
+            // No padding needed, TestPrefix is eight bytes long.
+            ptr = ptr.add(1);
+        }
+
+        // First atom. We will fit a u8 after it, because it requires seven padding bytes, which
+        // is an important edge case.
+        let mut ptr = ptr as *mut Atom;
+        unsafe {
+            let mut_ref = ptr.as_mut().unwrap();
+            mut_ref.atom_type = 42;
+            mut_ref.size = 1;
+            ptr = ptr.add(1);
+        }
+        let mut ptr = ptr as *mut u8;
+        unsafe {
+            let mut_ref = ptr.as_mut().unwrap();
+            *mut_ref = 17;
+            ptr = ptr.add(1);
+        }
+
+        // Padding and second prefix.
+        let mut ptr = unsafe { ptr.add(7) } as *mut TestPrefix;
+        unsafe {
+            let mut_ref = ptr.as_mut().unwrap();
+            mut_ref.value = 4711;
+            // No padding needed, TestPrefix is eight bytes long.
+            ptr = ptr.add(1);
+        }
+
+        // Second atom.
+        let mut ptr = ptr as *mut Atom;
+        unsafe {
+            let mut_ref = ptr.as_mut().unwrap();
+            mut_ref.atom_type = 10;
+            mut_ref.size = 1;
+            ptr = ptr.add(1);
+        }
+        let ptr = ptr as *mut u8;
+        unsafe {
+            let mut_ref = ptr.as_mut().unwrap();
+            *mut_ref = 4;
+        }
+
+        // #####################
+        // Testing the iterator.
+        // #####################
+        let mut iter: AtomIterator<TestPrefix> = AtomIterator::new(data.as_ref());
+
+        // First atom
+        let (prefix, atom) = iter.next().unwrap();
+        assert_eq!(650000, prefix.value);
+        assert_eq!(42, atom.atom_type);
+        assert_eq!(1, atom.size);
+        assert_eq!(17, unsafe { atom.get_raw_body() }[0]);
+
+        // Second atom.
+        let (prefix, atom) = iter.next().unwrap();
+        assert_eq!(4711, prefix.value);
+        assert_eq!(10, atom.atom_type);
+        assert_eq!(1, atom.size);
+        assert_eq!(4, unsafe { atom.get_raw_body() }[0]);
     }
 }
 
@@ -237,37 +345,29 @@ pub mod array {
             H::initialize(writer, parameter, urids)
         }
 
-        /// Internal method to widen an atom header reference.
+        /// Internal method to create an atom body reference.
         ///
         /// This method will check if the type URID is correct and if the size is big enough to
         /// contain the body header. The rest of the size will be interpreted as data.
-        pub unsafe fn __widen_ref<'a>(
-            header: &'a AtomHeader,
-            urids: &mut urid::CachedMap,
-        ) -> Result<&'a Atom<Self>, WidenRefError> {
-            if header.atom_type != urids.map(Self::get_uri()) {
-                return Err(WidenRefError::WrongURID);
-            }
-
-            let body_size = header.size as usize;
+        pub unsafe fn __create_ref<'a>(raw_data: &'a [u8]) -> Result<&'a Self, ()> {
             let array_header_size = size_of::<H>();
-            if body_size < array_header_size {
-                return Err(WidenRefError::MalformedAtom);
+            if raw_data.len() < array_header_size {
+                return Err(());
             }
 
-            let body_size = body_size - array_header_size;
-            if body_size % size_of::<T>() != 0 {
-                return Err(WidenRefError::MalformedAtom);
+            let tail_size = raw_data.len() - size_of::<H>();
+            if tail_size % size_of::<T>() != 0 {
+                return Err(());
             }
-            let vector_len: usize = body_size / size_of::<T>();
+            let tail_len = tail_size / size_of::<T>();
 
             // This is were the unsafe things happen!
             // We know the length of the string, therefore we can create a fat pointer to the atom.
-            let fat_ptr: (*const AtomHeader, usize) = (header as *const AtomHeader, vector_len);
-            let fat_ptr: *const Atom<Self> = transmute(fat_ptr);
-            let atom_ref: &Atom<Self> = fat_ptr.as_ref().unwrap();
+            let self_ptr: (*const u8, usize) = (raw_data.as_ptr(), tail_len);
+            let self_ptr: *const Self = transmute(self_ptr);
+            let self_ref: &Self = self_ptr.as_ref().unwrap();
 
-            Ok(atom_ref)
+            Ok(self_ref)
         }
 
         /// Push another value to the data array.

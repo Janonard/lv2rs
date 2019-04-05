@@ -31,10 +31,7 @@ pub trait WritingFrame<'a> {
     unsafe fn write_raw(&mut self, data: &[u8]) -> Result<&'a mut [u8], ()>;
 
     /// Return an immutable reference to the managed atom header.
-    fn get_header(&self) -> &AtomHeader;
-
-    /// Return a mutable reference to the managed atom header.
-    fn get_header_mut(&mut self) -> &mut AtomHeader;
+    fn get_atom(&self) -> &Atom;
 }
 
 /// Extended functionality for writing frames.
@@ -76,13 +73,13 @@ pub trait WritingFrameExt<'a, A: AtomBody + ?Sized>: WritingFrame<'a> + Sized {
         &'b mut self,
         urids: &mut urid::CachedMap,
     ) -> Result<NestedFrame<'b, 'a, C>, ()> {
-        let header = AtomHeader {
+        let atom = Atom {
             size: 0,
             atom_type: urids.map(C::get_uri()),
         };
-        let header = self.write_sized(&header)?;
+        let atom = self.write_sized(&atom)?;
         let writer = NestedFrame {
-            header: header,
+            atom: atom,
             parent: self,
             phantom: PhantomData,
         };
@@ -90,14 +87,14 @@ pub trait WritingFrameExt<'a, A: AtomBody + ?Sized>: WritingFrame<'a> + Sized {
         Ok(writer)
     }
 
-    /// Try to widen the atom header reference to an atom reference.
+    /// Try to get a reference to the body from our atom header.
     ///
     /// This is just a shortcut for `A::widen_ref(frame.get_header(), urids)`.
-    unsafe fn get_atom<'b>(
+    unsafe fn get_atom_body<'b>(
         &'b self,
         urids: &mut urid::CachedMap,
-    ) -> Result<&'b Atom<A>, WidenRefError> {
-        A::widen_ref(self.get_header(), urids)
+    ) -> Result<&'b A, GetBodyError> {
+        self.get_atom().get_body(urids)
     }
 }
 
@@ -107,7 +104,7 @@ pub trait WritingFrameExt<'a, A: AtomBody + ?Sized>: WritingFrame<'a> + Sized {
 /// the [`AtomOutputPort`](../ports/struct.AtomOutputPort.html) and simply acts like any
 /// [`WritingFrame`](trait.WritingFrame.html).
 pub struct RootFrame<'a, A: AtomBody + ?Sized> {
-    header: &'a mut AtomHeader,
+    atom: &'a mut Atom,
     free_data: &'a mut [u8],
     phantom: PhantomData<A>,
 }
@@ -121,24 +118,21 @@ impl<'a, A: AtomBody + ?Sized> RootFrame<'a, A> {
     ///
     /// If the slice is not big enough to hold the atom header, this function returns an `Err`.
     pub fn new(free_space: &'a mut [u8], urids: &mut urid::CachedMap) -> Result<Self, ()> {
-        let header_size = std::mem::size_of::<AtomHeader>();
-        if free_space.len() < header_size {
+        let atom_size = std::mem::size_of::<Atom>();
+        if free_space.len() < atom_size {
             return Err(());
         }
 
-        let header_ptr = free_space.as_mut_ptr() as *mut AtomHeader;
-        let header = unsafe { header_ptr.as_mut() }.unwrap();
+        let atom_ptr = free_space.as_mut_ptr() as *mut Atom;
+        let atom = unsafe { atom_ptr.as_mut() }.unwrap();
         let data = unsafe {
-            std::slice::from_raw_parts_mut(
-                header_ptr.add(1) as *mut u8,
-                free_space.len() - header_size,
-            )
+            std::slice::from_raw_parts_mut(atom_ptr.add(1) as *mut u8, free_space.len() - atom_size)
         };
 
-        header.atom_type = urids.map(A::get_uri());
-        header.size = 0;
+        atom.atom_type = urids.map(A::get_uri());
+        atom.size = 0;
         Ok(RootFrame {
-            header: header,
+            atom: atom,
             free_data: data,
             phantom: PhantomData,
         })
@@ -159,18 +153,14 @@ impl<'a, A: AtomBody + ?Sized> WritingFrame<'a> for RootFrame<'a, A> {
 
         target_data.copy_from_slice(data);
         self.free_data = free_data;
-        self.header.size += data.len() as i32;
+        self.atom.size += data.len() as i32;
 
         // Construct a reference to the newly written atom.
         Ok(target_data)
     }
 
-    fn get_header(&self) -> &AtomHeader {
-        self.header
-    }
-
-    fn get_header_mut(&mut self) -> &mut AtomHeader {
-        self.header
+    fn get_atom(&self) -> &Atom {
+        self.atom
     }
 }
 
@@ -189,7 +179,7 @@ pub struct NestedFrame<'a, 'b, A>
 where
     A: AtomBody + ?Sized,
 {
-    header: &'b mut AtomHeader,
+    atom: &'b mut Atom,
     parent: &'a mut WritingFrame<'b>,
     phantom: PhantomData<A>,
 }
@@ -199,7 +189,7 @@ where
     A: AtomBody + ?Sized,
 {
     fn drop(&mut self) {
-        let pad: &[u8] = match 8 - (self.parent.get_header().size % 8) {
+        let pad: &[u8] = match 8 - (self.parent.get_atom().size % 8) {
             1 => &[0; 1],
             2 => &[0; 2],
             3 => &[0; 3],
@@ -220,16 +210,12 @@ where
 {
     unsafe fn write_raw(&mut self, data: &[u8]) -> Result<&'b mut [u8], ()> {
         let data = self.parent.write_raw(data)?;
-        self.header.size += data.len() as i32;
+        self.atom.size += data.len() as i32;
         Ok(data)
     }
 
-    fn get_header(&self) -> &AtomHeader {
-        self.header
-    }
-
-    fn get_header_mut(&mut self) -> &mut AtomHeader {
-        self.header
+    fn get_atom(&self) -> &Atom {
+        self.atom
     }
 }
 

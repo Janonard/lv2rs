@@ -35,7 +35,7 @@
 //!             // Writing
 //!             {
 //!                 let mut frame =
-//!                     unsafe { self.out_port.write_atom(&(), &mut self.urids) }.unwrap();
+//!                     unsafe { self.out_port.write_atom_body(&(), &mut self.urids) }.unwrap();
 //!                 frame.push_atom::<i32>(&42, &mut self.urids).unwrap();
 //!                 frame.push_atom::<f32>(&17.0, &mut self.urids).unwrap();
 //!             }
@@ -44,17 +44,23 @@
 //!             let f32_urid = self.urids.map(<f32 as AtomBody>::get_uri());
 //!
 //!             // Reading.
-//!             let atom = unsafe { self.in_port.get_atom(&mut self.urids) }.unwrap();
-//!             for sub_atom in atom.iter() {
-//!                 if sub_atom.body_type() == i32_urid {
-//!                     let integer = sub_atom.cast::<i32>(&mut self.urids).unwrap();
-//!                     assert_eq!(42, **integer);
-//!                 } else if sub_atom.body_type() == f32_urid {
-//!                     let float = sub_atom.cast::<f32>(&mut self.urids).unwrap();
-//!                     assert_eq!(17.0, **float);
-//!                 } else {
-//!                     panic!("Unknown property in object!");
+//!             let tuple = unsafe { self.in_port.get_atom_body(&mut self.urids) }.unwrap();
+//!             for sub_atom in tuple.iter() {
+//!                 match unsafe { sub_atom.get_body::<i32>(&mut self.urids) } {
+//!                     Ok(integer) => {
+//!                         assert_eq!(42, *integer);
+//!                         continue
+//!                     }
+//!                     Err(_) => (),
 //!                 }
+//!                 match unsafe { sub_atom.get_body::<f32>(&mut self.urids) } {
+//!                     Ok(float) => {
+//!                         assert_eq!(17.0, *float);
+//!                         continue
+//!                     }
+//!                     Err(_) => (),
+//!                 }
+//!                 panic!("Unknown property in object!");
 //!             }
 //!         }
 //!     }
@@ -65,25 +71,24 @@
 //!
 //!     // Creating the plugin.
 //!     let mut plugin = Plugin {
-//!         in_port: AtomInputPort::new(&mut urids),
+//!         in_port: AtomInputPort::new(),
 //!         out_port: AtomOutputPort::new(),
 //!         urids: urids,
 //!     };
 //!
 //!     // Creating the atom space.
 //!     let mut atom_space = vec![0u8; 256];
-//!     let atom = unsafe { (atom_space.as_mut_ptr() as *mut AtomHeader).as_mut() }.unwrap();
+//!     let atom = unsafe { (atom_space.as_mut_ptr() as *mut Atom).as_mut() }.unwrap();
 //!     atom.size = 256 - 8;
 //!
 //!     // Connecting the ports.
-//!     plugin.in_port.connect_port(atom as &AtomHeader);
+//!     plugin.in_port.connect_port(atom as &Atom);
 //!     plugin.out_port.connect_port(atom);
 //!
 //!     // Calling `run`.
 //!     plugin.run();
 use crate::atom::{array::*, *};
 use crate::frame::{NestedFrame, WritingFrame, WritingFrameExt};
-use crate::unknown::*;
 use crate::uris;
 use std::ffi::CStr;
 
@@ -110,11 +115,8 @@ impl AtomBody for Tuple {
         Self::__initialize_body(writer, parameter, urids)
     }
 
-    unsafe fn widen_ref<'a>(
-        header: &'a AtomHeader,
-        urids: &mut urid::CachedMap,
-    ) -> Result<&'a Atom<Self>, WidenRefError> {
-        Self::__widen_ref(header, urids)
+    unsafe fn create_ref<'a>(raw_data: &'a [u8]) -> Result<&'a Self, ()> {
+        Self::__create_ref(raw_data)
     }
 }
 
@@ -122,8 +124,8 @@ impl Tuple {
     /// Create an iterator over all properties of the object.
     ///
     /// This iterator is based on the [`ChunkIterator`](../unknown/struct.ChunkIterator.html).
-    pub fn iter(&self) -> impl Iterator<Item = &Atom<Unknown>> {
-        ChunkIterator::<()>::new(&self.data).map(|(_, chunk): (&(), &Atom<Unknown>)| chunk)
+    pub fn iter(&self) -> impl Iterator<Item = &Atom> {
+        AtomIterator::<()>::new(&self.data).map(|(_, chunk): (&(), &Atom)| chunk)
     }
 }
 

@@ -34,11 +34,11 @@
 //!         /// Simulated `run` method.
 //!         fn run(&mut self) {
 //!             // Writing.
-//!             unsafe { self.out_port.write_atom(&42.0f32, &mut self.urids) }.unwrap();
+//!             unsafe { self.out_port.write_atom_body(&42.0f32, &mut self.urids) }.unwrap();
 //!
 //!             // Reading.
-//!             let atom = unsafe { self.in_port.get_atom(&mut self.urids) }.unwrap();
-//!             assert_eq!(42.0, **atom);
+//!             let float = unsafe { self.in_port.get_atom_body(&mut self.urids) }.unwrap();
+//!             assert_eq!(42.0, *float);
 //!         }
 //!     }
 //!
@@ -48,18 +48,18 @@
 //!
 //!     // Creating the plugin.
 //!     let mut plugin = Plugin {
-//!         in_port: AtomInputPort::new(&mut urids),
+//!         in_port: AtomInputPort::new(),
 //!         out_port: AtomOutputPort::new(),
 //!         urids: urids,
 //!     };
 //!
 //!     // Creating the atom space.
 //!     let mut atom_space = vec![0u8; 256];
-//!     let atom = unsafe { (atom_space.as_mut_ptr() as *mut AtomHeader).as_mut() }.unwrap();
+//!     let atom = unsafe { (atom_space.as_mut_ptr() as *mut Atom).as_mut() }.unwrap();
 //!     atom.size = 256 - 8;
 //!
 //!     // Connecting the ports.
-//!     plugin.in_port.connect_port(atom as &AtomHeader);
+//!     plugin.in_port.connect_port(atom as &Atom);
 //!     plugin.out_port.connect_port(atom);
 //!
 //!     // Calling `run`.
@@ -98,19 +98,12 @@ where
         Ok(())
     }
 
-    unsafe fn widen_ref<'a>(
-        header: &'a AtomHeader,
-        urids: &mut urid::CachedMap,
-    ) -> Result<&'a Atom<Self>, WidenRefError> {
-        if header.atom_type != urids.map(T::get_uri()) {
-            return Err(WidenRefError::WrongURID);
+    unsafe fn create_ref<'a>(raw_body: &'a [u8]) -> Result<&'a Self, ()> {
+        if raw_body.len() == std::mem::size_of::<Self>() {
+            Ok((raw_body.as_ptr() as *const Self).as_ref().unwrap())
+        } else {
+            Err(())
         }
-        if header.size as usize != std::mem::size_of::<Self>() {
-            return Err(WidenRefError::MalformedAtom);
-        }
-        Ok((header as *const AtomHeader as *const Atom<Self>)
-            .as_ref()
-            .unwrap())
     }
 }
 

@@ -5,6 +5,7 @@ use lv2rs_urid::CachedMap;
 use std::ffi::CStr;
 use ux::*;
 
+#[repr(C)]
 pub struct RawMidiMessage([u8]);
 
 impl RawMidiMessage {
@@ -118,22 +119,12 @@ impl<'a> AtomBody for RawMidiMessage {
         Ok(())
     }
 
-    unsafe fn widen_ref<'b>(
-        header: &'b AtomHeader,
-        _urids: &mut CachedMap,
-    ) -> Result<&'b Atom<Self>, WidenRefError> {
-        let size: usize = header.size as usize;
-        let fat_ptr: (*const AtomHeader, usize) = (header, size);
-        let fat_ptr: *const Atom<Self> = std::mem::transmute(fat_ptr);
-        let atom = fat_ptr.as_ref().unwrap();
-        if atom.body.0[0] != crate::message::START_OF_SYSTEM_EXCLUSIVE_STATUS {
-            Ok(atom)
-        } else {
-            Err(WidenRefError::MalformedAtom)
-        }
+    unsafe fn create_ref<'b>(raw_data: &'b [u8]) -> Result<&'b Self, ()> {
+        Ok((raw_data as *const [u8] as *const Self).as_ref().unwrap())
     }
 }
 
+#[repr(C)]
 pub struct SystemExclusiveMessage([u8]);
 
 impl SystemExclusiveMessage {
@@ -166,40 +157,33 @@ impl<'a> AtomBody for SystemExclusiveMessage {
         Ok(())
     }
 
-    unsafe fn widen_ref<'b>(
-        header: &'b AtomHeader,
-        _urids: &mut CachedMap,
-    ) -> Result<&'b Atom<Self>, WidenRefError> {
+    unsafe fn create_ref<'b>(raw_data: &'b [u8]) -> Result<&'b Self, ()> {
         // Creating the reference.
-        let size: usize = header.size as usize;
-        let fat_ptr: (*const AtomHeader, usize) = (header, size);
-        let fat_ptr: *const Atom<Self> = std::mem::transmute(fat_ptr);
-        let atom = fat_ptr.as_ref().unwrap();
+        let self_ref = (raw_data as *const [u8] as *const Self).as_ref().unwrap();
 
         // Assuring a minimal length of two bytes.
-        let data = &atom.body.0;
-        if data.len() < 2 {
-            return Err(WidenRefError::MalformedAtom);
+        if self_ref.0.len() < 2 {
+            return Err(());
         }
 
         // Check the first and the last byte to be the correct status bytes.
-        let first_byte: u8 = *data.first().unwrap();
-        let last_byte: u8 = *data.last().unwrap();
+        let first_byte: u8 = *self_ref.0.first().unwrap();
+        let last_byte: u8 = *self_ref.0.last().unwrap();
         if (first_byte != crate::message::START_OF_SYSTEM_EXCLUSIVE_STATUS)
             | (last_byte != crate::message::END_OF_SYSTE_EXCLUSICE_STATUS)
         {
-            return Err(WidenRefError::MalformedAtom);
+            return Err(());
         }
 
         // Check for interior status bytes.
         // Original MIDI allows some of them, but LV2 doesn't.
-        for byte in &data[1..data.len() - 1] {
+        for byte in &self_ref.0[1..self_ref.0.len() - 1] {
             if (*byte & 0b1000_0000) != 0 {
-                return Err(WidenRefError::MalformedAtom);
+                return Err(());
             }
         }
 
-        Ok(atom)
+        Ok(self_ref)
     }
 }
 

@@ -5,11 +5,10 @@ use crate::atom::*;
 use crate::frame::RootFrame;
 use std::marker::PhantomData;
 use std::ptr::{null, null_mut};
-use urid::URID;
 
 /// Wrapper for atom writing operations.
 pub struct AtomOutputPort<A: AtomBody + ?Sized> {
-    atom: *mut AtomHeader,
+    atom: *mut Atom,
     phantom: PhantomData<A>,
 }
 
@@ -32,7 +31,7 @@ pub enum GetAtomError {
     /// Maybe `connect_port` is not implemented correctly?
     NullPointer,
     /// Widening the atom header failed.
-    WidenRef(WidenRefError),
+    GetBody(GetBodyError),
 }
 
 impl<A: AtomBody + ?Sized> AtomOutputPort<A> {
@@ -51,7 +50,7 @@ impl<A: AtomBody + ?Sized> AtomOutputPort<A> {
     ///
     /// As implied by the name, this method should be called by an atom's `connect_port`. However,
     /// you have to cast the passed pointer to the correct type!
-    pub fn connect_port(&mut self, atom: *mut AtomHeader) {
+    pub fn connect_port(&mut self, atom: *mut Atom) {
         self.atom = atom;
     }
 
@@ -66,7 +65,7 @@ impl<A: AtomBody + ?Sized> AtomOutputPort<A> {
     /// This method is unsafe since it dereferences the raw, internal pointer and therefore could
     /// yield undefined behaviour. Make sure that your plugin's `connect_port` method calls this
     /// port's [`connect_port`](#method.connect_port) method correctly!
-    pub unsafe fn write_atom<'a>(
+    pub unsafe fn write_atom_body<'a>(
         &'a mut self,
         parameter: &A::InitializationParameter,
         urids: &mut urid::CachedMap,
@@ -86,8 +85,7 @@ impl<A: AtomBody + ?Sized> AtomOutputPort<A> {
 
 /// Wrapper for atom reading operations.
 pub struct AtomInputPort<A: AtomBody + ?Sized> {
-    atom: *const AtomHeader,
-    type_urid: URID,
+    atom: *const Atom,
     phantom: PhantomData<A>,
 }
 
@@ -96,10 +94,9 @@ impl<A: AtomBody + ?Sized> AtomInputPort<A> {
     ///
     /// Please note that the newly created port wil point to null and therefore,
     /// [`write_atom`](#method.write_atom) will yield undefined behaviour.
-    pub fn new(urids: &mut urid::CachedMap) -> Self {
+    pub fn new() -> Self {
         Self {
             atom: null(),
-            type_urid: urids.map(A::get_uri()),
             phantom: PhantomData,
         }
     }
@@ -108,11 +105,11 @@ impl<A: AtomBody + ?Sized> AtomInputPort<A> {
     ///
     /// As implied by the name, this method should be called by an atom's `connect_port`. However,
     /// you have to cast the passed pointer to the correct type!
-    pub fn connect_port(&mut self, atom: *const AtomHeader) {
+    pub fn connect_port(&mut self, atom: *const Atom) {
         self.atom = atom;
     }
 
-    /// Dereference the internal raw pointer to a atom reference.
+    /// Dereference the internal raw pointer to an atom body reference.
     ///
     /// If the internal pointer points to null or if the atom is illformed, this method will return
     /// an `Err`.
@@ -120,14 +117,12 @@ impl<A: AtomBody + ?Sized> AtomInputPort<A> {
     /// This method is unsafe since it dereferences the raw, internal pointer and therefore could
     /// yield undefined behaviour. Make sure that your plugin's `connect_port` method calls this
     /// port's [`connect_port`](#method.connect_port) method correctly!
-    pub unsafe fn get_atom(&self, urids: &mut urid::CachedMap) -> Result<&Atom<A>, GetAtomError> {
+    pub unsafe fn get_atom_body(&self, urids: &mut urid::CachedMap) -> Result<&A, GetAtomError> {
         let atom = match self.atom.as_ref() {
             Some(atom) => atom,
             None => return Err(GetAtomError::NullPointer),
         };
-        if atom.atom_type != self.type_urid {
-            return Err(GetAtomError::WidenRef(WidenRefError::WrongURID));
-        }
-        A::widen_ref(atom, urids).map_err(|err| GetAtomError::WidenRef(err))
+        atom.get_body(urids)
+            .map_err(|err| GetAtomError::GetBody(err))
     }
 }

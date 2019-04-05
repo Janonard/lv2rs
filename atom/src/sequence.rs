@@ -1,6 +1,5 @@
 use crate::atom::{array::*, *};
 use crate::frame::{NestedFrame, WritingFrame, WritingFrameExt};
-use crate::unknown::*;
 use crate::uris;
 use std::ffi::CStr;
 use urid::URID;
@@ -110,11 +109,8 @@ impl AtomBody for Sequence {
         Self::__initialize_body(writer, parameter, urids)
     }
 
-    unsafe fn widen_ref<'a>(
-        header: &'a AtomHeader,
-        urids: &mut urid::CachedMap,
-    ) -> Result<&'a Atom<Self>, WidenRefError> {
-        Self::__widen_ref(header, urids)
+    unsafe fn create_ref<'a>(raw_data: &'a [u8]) -> Result<&'a Self, ()> {
+        Self::__create_ref(raw_data)
     }
 }
 
@@ -126,20 +122,17 @@ impl Sequence {
     pub fn iter<'a>(
         &'a self,
         urids: &mut urid::CachedMap,
-    ) -> impl Iterator<Item = (TimeStamp, &'a Atom<Unknown>)> {
+    ) -> impl Iterator<Item = (TimeStamp, &'a Atom)> {
         let time_unit = TimeUnit::from_urid(self.header.unit, urids);
-        ChunkIterator::new(&self.data)
-            .map(
-                move |(raw_stamp, chunk): (&'a RawTimeStamp, &'a Atom<Unknown>)|
-                    -> (TimeStamp, &'a Atom<Unknown>)
-                {
-                    let stamp = match time_unit {
-                        TimeUnit::Frames => TimeStamp::Frames(unsafe {raw_stamp.frames}),
-                        TimeUnit::Beats => TimeStamp::Beats(unsafe {raw_stamp.beats}),
-                    };
-                    (stamp, chunk)
-                }
-            )
+        AtomIterator::new(&self.data).map(
+            move |(raw_stamp, chunk): (&'a RawTimeStamp, &'a Atom)| -> (TimeStamp, &'a Atom) {
+                let stamp = match time_unit {
+                    TimeUnit::Frames => TimeStamp::Frames(unsafe { raw_stamp.frames }),
+                    TimeUnit::Beats => TimeStamp::Beats(unsafe { raw_stamp.beats }),
+                };
+                (stamp, chunk)
+            },
+        )
     }
 }
 
@@ -152,8 +145,8 @@ pub trait SequenceWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, Seque
     ) -> Result<NestedFrame<'b, 'a, A>, ()> {
         // Retrieving the time unit of the sequence.
         let header_unit: TimeUnit = {
-            let atom = unsafe { self.get_atom(urids) }.unwrap();
-            TimeUnit::from_urid(atom.body.header.unit, urids)
+            let atom_body = unsafe { self.get_atom_body(urids) }.unwrap();
+            TimeUnit::from_urid(atom_body.header.unit, urids)
         };
 
         if header_unit != time.get_unit() {

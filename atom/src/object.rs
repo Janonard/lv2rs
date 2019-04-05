@@ -50,7 +50,7 @@
 //!                 // real plugins, you would describe `MyClass` in a Turtle document.
 //!                 let mut frame =
 //!                     unsafe {
-//!                         self.out_port.write_atom(
+//!                         self.out_port.write_atom_body(
 //!                             &(0, my_class_urid),
 //!                             &mut self.urids
 //!                         )
@@ -63,16 +63,16 @@
 //!             }
 //!
 //!             // Reading
-//!             let atom = unsafe { self.in_port.get_atom(&mut self.urids) }.unwrap();
+//!             let object = unsafe { self.in_port.get_atom_body(&mut self.urids) }.unwrap();
 //!             // We're iterating through the properties. If a property matches our known key,
 //!             // We assert that it has the right value.
-//!             for (header, property) in atom.iter() {
+//!             for (header, property_atom) in object.iter() {
 //!                 if header.key == a_urid {
-//!                     let a = property.cast::<i32>(&mut self.urids).unwrap();
-//!                     assert_eq!(42, **a);
+//!                     let a: &i32 = unsafe { property_atom.get_body(&mut self.urids) }.unwrap();
+//!                     assert_eq!(42, *a);
 //!                 } else if header.key == b_urid {
-//!                     let b = property.cast::<f32>(&mut self.urids).unwrap();
-//!                     assert_eq!(17.0, **b);
+//!                     let b: &f32 = unsafe { property_atom.get_body(&mut self.urids) }.unwrap();
+//!                     assert_eq!(17.0, *b);
 //!                 } else {
 //!                     panic!("Unknown property in object!");
 //!                 }
@@ -86,25 +86,24 @@
 //!
 //!     // Creating the plugin.
 //!     let mut plugin = Plugin {
-//!         in_port: AtomInputPort::new(&mut urids),
+//!         in_port: AtomInputPort::new(),
 //!         out_port: AtomOutputPort::new(),
 //!         urids: urids,
 //!     };
 //!
 //!     // Creating the atom space.
 //!     let mut atom_space = vec![0u8; 256];
-//!     let atom = unsafe { (atom_space.as_mut_ptr() as *mut AtomHeader).as_mut() }.unwrap();
+//!     let atom = unsafe { (atom_space.as_mut_ptr() as *mut Atom).as_mut() }.unwrap();
 //!     atom.size = 256 - 8;
 //!
 //!     // Connecting the ports.
-//!     plugin.in_port.connect_port(atom as &AtomHeader);
+//!     plugin.in_port.connect_port(atom as &Atom);
 //!     plugin.out_port.connect_port(atom);
 //!
 //!     // Calling `run`.
 //!     plugin.run();
 use crate::atom::{array::*, *};
 use crate::frame::{NestedFrame, WritingFrame, WritingFrameExt};
-use crate::unknown::*;
 use crate::uris;
 use std::ffi::CStr;
 use urid::URID;
@@ -182,11 +181,8 @@ impl AtomBody for Object {
         Self::__initialize_body(writer, &(*id, *otype), urids)
     }
 
-    unsafe fn widen_ref<'a>(
-        header: &'a AtomHeader,
-        urids: &mut urid::CachedMap,
-    ) -> Result<&'a Atom<Self>, WidenRefError> {
-        Self::__widen_ref(header, urids)
+    unsafe fn create_ref<'a>(raw_body: &'a [u8]) -> Result<&'a Self, ()> {
+        Self::__create_ref(raw_body)
     }
 }
 
@@ -194,8 +190,8 @@ impl Object {
     /// Create an iterator over all properties of the object.
     ///
     /// This iterator is based on the [`ChunkIterator`](../unknown/struct.ChunkIterator.html).
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item = (&'a PropertyHeader, &'a Atom<Unknown>)> {
-        ChunkIterator::<PropertyHeader>::new(&self.data)
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = (&'a PropertyHeader, &'a Atom)> {
+        AtomIterator::<PropertyHeader>::new(&self.data)
     }
 }
 
