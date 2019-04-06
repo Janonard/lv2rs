@@ -22,3 +22,7 @@ members = [
     "midi",
     "urid",
 ]
+
+[badges]
+travis-ci = { repository = "Janonard/lv2rs", branch = "master" }
+maintenance = { status = "actively-developed" }
