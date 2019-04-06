@@ -119,8 +119,9 @@ impl<'a> AtomBody for RawMidiMessage {
         Ok(())
     }
 
-    unsafe fn create_ref<'b>(raw_data: &'b [u8]) -> Result<&'b Self, ()> {
-        Ok((raw_data as *const [u8] as *const Self).as_ref().unwrap())
+    fn create_ref<'b>(raw_data: &'b [u8]) -> Result<&'b Self, ()> {
+        let self_ptr = raw_data as *const [u8] as *const Self;
+        Ok(unsafe { self_ptr.as_ref() }.unwrap())
     }
 }
 
@@ -157,9 +158,10 @@ impl<'a> AtomBody for SystemExclusiveMessage {
         Ok(())
     }
 
-    unsafe fn create_ref<'b>(raw_data: &'b [u8]) -> Result<&'b Self, ()> {
+    fn create_ref<'b>(raw_data: &'b [u8]) -> Result<&'b Self, ()> {
         // Creating the reference.
-        let self_ref = (raw_data as *const [u8] as *const Self).as_ref().unwrap();
+        let self_ptr = raw_data as *const [u8] as *const Self;
+        let self_ref = unsafe { self_ptr.as_ref() }.unwrap();
 
         // Assuring a minimal length of two bytes.
         if self_ref.0.len() < 2 {
