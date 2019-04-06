@@ -1,3 +1,4 @@
+//! URIs of the LV2 MIDI extension.
 pub const URI: &[u8] = b"http://lv2plug.in/ns/ext/midi\0";
 pub const ACTIVE_SENSE_URI: &[u8] = b"http://lv2plug.in/ns/ext/midi#ActiveSense\0";
 pub const AFTERTOUCH_URI: &[u8] = b"http://lv2plug.in/ns/ext/midi#Aftertouch\0";

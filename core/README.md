@@ -2,7 +2,6 @@
 
 This is a safe and idiomatic re-implementation of the LV2 core library. It goals are to provide an interface that is compatible with hosts written in C and uses an idiomatic API for plugin implementors.
 
-
 ## Getting started
 
 Creating a plugin binary is fairly simple:

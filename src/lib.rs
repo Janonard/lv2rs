@@ -25,7 +25,18 @@
 //! almost any use cases of LV2. I would consider this re-implementation done when one can write
 //! every example in the [LV2 Book](http://lv2plug.in/book/) using this library.
 
-pub extern crate lv2rs_core as core;
-pub extern crate lv2rs_urid as urid;
 pub extern crate lv2rs_atom as atom;
+pub extern crate lv2rs_core as core;
 pub extern crate lv2rs_midi as midi;
+pub extern crate lv2rs_urid as urid;
+
+/// Re-export module intended for wildcard use
+///
+/// Simply import it like that:
+///
+///     extern crate lv2rs as lv2;
+///     use lv2::prelude::*;
+pub mod prelude {
+    pub use atom::prelude::*;
+    pub use midi::prelude::*;
+}

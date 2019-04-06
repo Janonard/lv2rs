@@ -1,13 +1,30 @@
+/// Atom types for MIDI handling.
 use crate::message::*;
+use crate::prelude::*;
+use crate::status_bytes::*;
 use lv2rs_atom::prelude::*;
 use lv2rs_urid::CachedMap;
 use std::ffi::CStr;
-use ux::*;
 
 #[repr(C)]
+/// Raw representation of a "normal", non-system-exclusive message.
+///
+/// There are many different but similiar MIDI message types. Due to their similarities, all of them
+/// are represented by this type.
+///
+/// `RawMidiMessage` does not have a writer extension; You simply intitialize it with a value of
+/// the [`MidiMessage`](enum.MidiMessage.html) enum and that's it.
+///
+/// Reading is done by calling the [`interpret`](#method.interpret) method which tries to create
+/// a `MidiMessage` value from the raw message.
 pub struct RawMidiMessage([u8]);
 
 impl RawMidiMessage {
+    /// Try to create a `MidiMessage` from the raw message.
+    ///
+    /// This basically an alias for
+    /// [`MidiMessage::try_from`](enum.MidiMessage.html#method.try_from) and therefore,
+    /// errors are forwarded.
     pub fn interpret(&self) -> Result<MidiMessage, TryFromError> {
         MidiMessage::try_from(&self.0)
     }
@@ -119,16 +136,43 @@ impl<'a> AtomBody for RawMidiMessage {
     }
 
     fn create_ref<'b>(raw_data: &'b [u8]) -> Result<&'b Self, ()> {
+        // A MIDI message may only have one, two or three bytes.
+        if (raw_data.len() > 3) | (raw_data.len() == 0) {
+            return Err(());
+        }
+        // The first byte must be a status byte.
+        if (raw_data[0] & 0b1000_0000) == 0 {
+            return Err(());
+        }
+        // The second byte must not be a status byte.
+        if (raw_data.len() >= 2) & (raw_data[1] & 0b1000_0000 != 0) {
+            return Err(());
+        }
+        // The third byte must not be a status byte.
+        if (raw_data.len() == 3) & (raw_data[2] & 0b1000_0000 != 0) {
+            return Err(());
+        }
+        // Construct and return the reference.
         let self_ptr = raw_data as *const [u8] as *const Self;
         Ok(unsafe { self_ptr.as_ref() }.unwrap())
     }
 }
 
 #[repr(C)]
+/// Raw representation of a system-exclusive message.
+///
+/// System exclusive messages are very flexible: They start with a specific status byte and end with
+/// another and anything else does not matter. However, since they have a level of flexibility that
+/// other messages don't have, they have to be handled by another atom type; This one!
+///
+/// A `SystemExclusiveMessage` doesn't use a writing frame extension. This means that the whole
+/// message has to be written in one go when initializing.
 pub struct SystemExclusiveMessage([u8]);
 
 impl SystemExclusiveMessage {
+    /// Return the data bytes between the start and end status byte.
     pub fn get_data(&self) -> &[u8] {
+        assert!(self.0.len() >= 2);
         let data = &self.0;
         let len = data.len();
         &data[1..len - 1]
@@ -136,7 +180,7 @@ impl SystemExclusiveMessage {
 }
 
 impl<'a> AtomBody for SystemExclusiveMessage {
-    type InitializationParameter = Box<[u8]>;
+    type InitializationParameter = [u8];
 
     fn get_uri() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(crate::uris::EVENT_URI) }
@@ -144,16 +188,15 @@ impl<'a> AtomBody for SystemExclusiveMessage {
 
     unsafe fn initialize_body<'b, W>(
         writer: &mut W,
-        data: &Box<[u8]>,
+        data: &[u8],
         _urids: &mut CachedMap,
     ) -> Result<(), ()>
     where
         W: WritingFrame<'b> + WritingFrameExt<'b, Self>,
     {
         writer.write_sized(&START_OF_SYSTEM_EXCLUSIVE_STATUS)?;
-        let data: &[u8] = std::slice::from_raw_parts(data.as_ptr() as *const u8, data.len());
         writer.write_raw(data)?;
-        writer.write_sized(&END_OF_SYSTE_EXCLUSICE_STATUS)?;
+        writer.write_sized(&END_OF_SYSTEM_EXCLUSICE_STATUS)?;
         Ok(())
     }
 
@@ -170,8 +213,8 @@ impl<'a> AtomBody for SystemExclusiveMessage {
         // Check the first and the last byte to be the correct status bytes.
         let first_byte: u8 = *self_ref.0.first().unwrap();
         let last_byte: u8 = *self_ref.0.last().unwrap();
-        if (first_byte != crate::message::START_OF_SYSTEM_EXCLUSIVE_STATUS)
-            | (last_byte != crate::message::END_OF_SYSTE_EXCLUSICE_STATUS)
+        if (first_byte != START_OF_SYSTEM_EXCLUSIVE_STATUS)
+            | (last_byte != END_OF_SYSTEM_EXCLUSICE_STATUS)
         {
             return Err(());
         }

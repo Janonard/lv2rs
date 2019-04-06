@@ -1,92 +1,79 @@
-use ux::*;
+use crate::prelude::*;
+use crate::status_bytes::*;
 
+/// A MIDI message.
+///
+/// Please consult the [MIDI reference](https://www.midi.org/specifications) for information on how
+/// to use these messages.
 pub enum MidiMessage {
-    NoteOff {
-        channel: u4,
-        note: u7,
-        velocity: u7,
-    },
-    NoteOn {
-        channel: u4,
-        note: u7,
-        velocity: u7,
-    },
-    PolyKeyPressure {
-        channel: u4,
-        pressure: u7,
-    },
+    /// Stop playing a note.
+    NoteOff { channel: u4, note: u7, velocity: u7 },
+    /// Start playing a note.
+    NoteOn { channel: u4, note: u7, velocity: u7 },
+    /// Change the pressure on a key.
+    PolyKeyPressure { channel: u4, pressure: u7 },
+    /// Change the value of a controlled number.
     ControlChange {
         channel: u4,
         control_number: u7,
         control_value: u7,
     },
-    ProgramChange {
-        channel: u4,
-        program_number: u7,
-    },
-    ChannelPressure {
-        channel: u4,
-        pressure: u7,
-    },
-    PitchBendChange {
-        channel: u4,
-        value: u14,
-    },
-    TimeCodeQuarterFrame {
-        message_type: u3,
-        value: u4,
-    },
-    SongPositionPointer {
-        position: u14,
-    },
-    SongSelect {
-        song: u7,
-    },
+    /// Change the active program.
+    ProgramChange { channel: u4, program_number: u7 },
+    /// Change the pressure of the channel.
+    ChannelPressure { channel: u4, pressure: u7 },
+    /// Change the pitch bend.
+    PitchBendChange { channel: u4, value: u14 },
+    /// Synchronisation message.
+    TimeCodeQuarterFrame { message_type: u3, value: u4 },
+    /// Change the current position in a song.
+    SongPositionPointer { position: u14 },
+    /// Select another song.
+    SongSelect { song: u7 },
+    /// Tune analog oscillators.
     TuneRequest,
+    /// A step of the timing clock.
     TimingClock,
+    /// Start the playback.
     Start,
+    /// Continue the playback.
     Continue,
+    /// Stop the playback.
     Stop,
+    /// Active sensing message.
     ActiveSensing,
+    /// Reset the system.
     SystemReset,
 }
 
-pub const NOTE_OFF_STATUS: u8 = 0b10000000;
-pub const NOTE_ON_STATUS: u8 = 0b10010000;
-pub const POLY_KEY_PRESSURE_STATUS: u8 = 0b10100000;
-pub const CONTROL_CHANGE_STATUS: u8 = 0b10110000;
-pub const PROGRAM_CHANGE_STATUS: u8 = 0b11000000;
-pub const CHANNEL_PRESSURE_STATUS: u8 = 0b11010000;
-pub const PITCH_BEND_CHANGE_STATUS: u8 = 0b11100000;
-pub const START_OF_SYSTEM_EXCLUSIVE_STATUS: u8 = 0b11110000;
-pub const TIME_CODE_QUARTER_FRAME_STATUS: u8 = 0b11110001;
-pub const SONG_POSITION_POINTER_STATUS: u8 = 0b11110010;
-pub const SONG_SELECT_STATUS: u8 = 0b11110011;
-pub const TUNE_REQUEST_STATUS: u8 = 0b11110110;
-pub const END_OF_SYSTE_EXCLUSICE_STATUS: u8 = 0b11110111;
-pub const TIMING_CLOCK_STATUS: u8 = 0b11111000;
-pub const START_STATUS: u8 = 0b11111010;
-pub const CONTINUE_STATUS: u8 = 0b11111011;
-pub const STOP_STATUS: u8 = 0b11111100;
-pub const ACTIVE_SENSING_STATUS: u8 = 0b11111110;
-pub const SYSTEM_RESET_STATUS: u8 = 0b11111111;
-
+/// Errors that may arise when using [`MidiMessage::try_from`](enum.MidiMessage.html#method.try_from)
 #[derive(Debug)]
 pub enum TryFromError {
+    /// The first byte of the slice does not correspond to a known MIDI status byte.
     UnknownMessage,
+    /// The message is a system-exclusive message.
+    ///
+    /// Please use the [`SystemExclusiveMessage`](struct.SystemExclusiveMessage.html) struct to
+    /// interpret system-exclusive messages.
     SystemExclusiveMessage,
+    /// The slice is to short for the message, or the message is incomplete.
     SliceToShort,
+    /// The first byte of the slice is not a status byte.
     NoStatusByte,
-    NoEndOfSystemExclusive,
+    /// There are other status bytes in the slice except from the first one.
+    ///
+    /// LV2 does not allow multiple messages in one atom.
     InteriorStatusByte,
 }
 
+/// Split the status byte in the "raw" status byte and the channel number.
 fn split_to_channel_status(status: u8) -> (u8, u4) {
     let channel_status = status & 0b11110000;
     let channel = u4::new(status & 0b00001111);
     (channel_status, channel)
 }
 
+/// Join to data bytes to a u14.
 fn data_to_u14(lsb: u7, msb: u7) -> u14 {
     let lsb: u16 = lsb.into();
     let msb: u16 = msb.into();
@@ -95,6 +82,7 @@ fn data_to_u14(lsb: u7, msb: u7) -> u14 {
 }
 
 impl MidiMessage {
+    /// Try to create a `MidiMessage` from a one-byte-message.
     fn try_from_one_byte(status: u8) -> Result<Self, TryFromError> {
         match status {
             TUNE_REQUEST_STATUS => Ok(MidiMessage::TuneRequest),
@@ -108,6 +96,7 @@ impl MidiMessage {
         }
     }
 
+    /// Try to create a `MidiMessage` from a two-byte-message.
     fn try_from_two_byte(status: u8, data: u7) -> Result<Self, TryFromError> {
         let (channel_status, channel) = split_to_channel_status(status);
 
@@ -148,6 +137,7 @@ impl MidiMessage {
         }
     }
 
+    /// Try to create a `MidiMessage` from a three-byte-message.
     fn try_from_three_byte(
         status: u8,
         first_data: u7,
@@ -196,23 +186,21 @@ impl MidiMessage {
         }
     }
 
+    /// Try create a `MidiMessage` from a slice of bytes.
+    ///
+    /// This is pretty straight forward: Try to parse the data and create a `MidiMessage` object
+    /// for it. Please note that this method does not support system-exclusive message due to
+    /// their unorthodox nature. These are handled by the
+    /// [`SystemExclusiveMessage`](struct.SystemExclusiveMessage.html) struct.
+    ///
+    /// The error cases are described in the `TryFromError` enum.
     pub fn try_from(slice: &[u8]) -> Result<Self, TryFromError> {
         if slice.len() == 0 {
             return Err(TryFromError::SliceToShort);
         }
         let status_byte = slice[0];
 
-        let data: &[u8] = if status_byte == START_OF_SYSTEM_EXCLUSIVE_STATUS {
-            if slice.len() == 1 {
-                return Err(TryFromError::SliceToShort);
-            }
-            if slice[slice.len() - 1] != END_OF_SYSTE_EXCLUSICE_STATUS {
-                return Err(TryFromError::NoEndOfSystemExclusive);
-            }
-            &slice[1..slice.len() - 1]
-        } else {
-            &slice[1..]
-        };
+        let data: &[u8] = &slice[1..];
 
         for byte in data {
             if byte & 0b10000000 != 0 {

@@ -1,5 +1,3 @@
-//! A rust re-implementation of the LV2 core library.
-//!
 //! This crate contains the complete contents of the
 //! [LV2 core library](http://lv2plug.in/ns/lv2core/lv2core.html) with additional constructions
 //! to make the use of LV2 as idiomatic and safe as possible.
