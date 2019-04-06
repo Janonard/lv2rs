@@ -7,7 +7,7 @@
 //! When initialized, an object does not contain any items. Instead, you have to push them to the
 //! end of the object using the [`ObjectWritingFrame`](trait.ObjectWritingFrame.html) trait. Every
 //! writing frame implements this trait via a blanket implementation and the trait is included in
-//! the crate's prelude. You can, therefore, act as if the extended method were normal methods of a
+//! the crate's prelude. You can, therefore, act as if the extended methods were normal methods of a
 //! writing frame.
 //!
 //! Reading an object is accomplished by creating an iterator over the properties with the
@@ -20,7 +20,7 @@
 //!
 //!     use atom::prelude::*;
 //!     use atom::ports::*;
-//!     use atom::atom::*;
+//!     use atom::*;
 //!     use urid::{CachedMap, debug::DebugMap};
 //!     use std::ffi::{CString, CStr};
 //!

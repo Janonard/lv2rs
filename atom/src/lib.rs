@@ -1,5 +1,3 @@
-//! A rust re-implementation of the LV2 atom library.
-//!
 //! The purpose of this crate is to provide safe, idiomatic and easy-to-use means to use the type
 //! system introduced by the LV2 atom library. This type system is (relatively) portable and can be
 //! used to exchange information of arbitrary type among LV2 plugins.
@@ -22,18 +20,14 @@
 //!     * `i64`
 //!     * `bool`
 //!     * `URID`
-//! * [`Literal`](literal/type.Literal.html): A proper UTF-8 string.
-//! * [`AtomString`](string/type.AtomString.html): An old-school ASCII string, also used for URIs.
-//! * [`Vector`](vector/type.Vector.html): Homogenous array of sized atoms, like numbers.
-//! * [`Tuple`](tuple/type.Tuple.html): Heterogenous array of atoms, including dynamically sized
-//! ones.
-//! * [`Sequence`](sequence/type.Sequence.html): Tuple with additional time stamps for every atom.
+//! * [`Literal`](literal/index.html): A proper UTF-8 string.
+//! * [`Object`](object/index.html): Compound type similar to tuples that maps URIDs to atoms.
+//! * [`Sequence`](sequence/index.html): Tuple with additional time stamps for every atom.
 //! Usually used for frame-perfect, event-based data.
-//! * [`Object`](object/type.Object.html): Compound type similar to tuples that maps URIDs to atoms.
-//! * [`Chunk`](chunk/type.Chunk.html): Simple chunk of bytes. Often used for unknown or
-//! not-yet-known atoms.
-//!
-//! The purpose of this crate is to provide means to correctly read and construct said objects.
+//! * [`AtomString`](string/index.html): An old-school ASCII string, also used for URIs.
+//! * [`Tuple`](tuple/index.html): Heterogenous array of atoms, including dynamically sized
+//! ones.
+//! * [`Vector`](vector/index.html): Homogenous array of sized atoms, like numbers.
 //!
 //! ## How does it work?
 //!
@@ -54,16 +48,16 @@
 //! If a plugin has to write information to an atom port, the host provides the plugin with a pointer
 //! to a chunk of free space it can write to. An [`AtomOutputPort`](ports/struct.AtomOutputPort.html)
 //! can interpret this pointer and creates a writing frame for it using the
-//! [`write_atom`](ports/struct.AtomOutputPort.html#method.write_atom) method.
+//! [`write_atom_body`](ports/struct.AtomOutputPort.html#method.write_atom_body) method.
 //!
 //! Such [writing frames](frame/trait.WritingFrame.html) are able to write data to the provided
 //! chunk. However, most of their methods are unsafe since they do not check the resulting output
 //! for meaningfulness. Instead, you should use the safe methods provided by the writing frame
 //! extensions, which are tailored for specific atoms and guarantee the consistency of the resulting
-//! output.
+//! output. You can read more about them in their specific module descriptions.
 extern crate lv2rs_urid as urid;
 
-pub mod atom;
+mod atom;
 pub mod frame;
 pub mod literal;
 pub mod object;
@@ -74,6 +68,8 @@ pub mod string;
 pub mod tuple;
 pub mod uris;
 pub mod vector;
+
+pub use atom::*;
 
 /// Re-exportation module that contains all traits necessary to use lv2rs-atom.
 pub mod prelude {

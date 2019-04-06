@@ -1,9 +1,108 @@
+//! Atom tuple with time stamps for every contained atom.
+//!
+//! A sequence is basically a tuple, but every contained atom is marked with the time stamp. This
+//! way, these atoms, now called "events", can be matched to frames in audio slices and processed
+//! with accurate timing. However, these time stamps can be given either in frames, which
+//! correspond to elements in an audio data slice, or in beats, a more abstract, tempo-independent
+//! way of describing timing.
+//!
+//! When writing a sequence, you have to pass over the time unit the sequence should. However, after
+//! it was initialized, a sequence does not contain any atoms. These have to be pushed to the sequence
+//! using the [`SequenceWritingFrame`](trait.SequenceWritingFrame.html) trait. Every
+//! writing frame implements this trait via a blanket implementation and the trait is included in
+//! the crate's prelude. You can, therefore, act as if the extended methods were normal methods of a
+//! writing frame.
+//!
+//! Reading atoms is done by iterating through all atoms one by one. Iterators are produced by the
+//! [`iter`](type.Tuple.html#method.iter) method.
+//!
+//! An example:
+//!
+//!     extern crate lv2rs_atom as atom;
+//!     extern crate lv2rs_urid as urid;
+//!
+//!     use atom::prelude::*;
+//!     use atom::ports::*;
+//!     use atom::*;
+//!     use urid::{CachedMap, debug::DebugMap};
+//!     use std::ffi::CStr;
+//!
+//!     pub struct Plugin {
+//!         in_port: AtomInputPort<Tuple>,
+//!         out_port: AtomOutputPort<Tuple>,
+//!         urids: CachedMap,
+//!     }
+//!
+//!     impl Plugin {
+//!         /// Simulated `run` method.
+//!         fn run(&mut self) {
+//!             // Writing
+//!             {
+//!                 let mut frame =
+//!                     unsafe { self.out_port.write_atom_body(&(), &mut self.urids) }.unwrap();
+//!                 frame.push_atom::<i32>(&42, &mut self.urids).unwrap();
+//!                 frame.push_atom::<f32>(&17.0, &mut self.urids).unwrap();
+//!             }
+//!
+//!             let i32_urid = self.urids.map(<i32 as AtomBody>::get_uri());
+//!             let f32_urid = self.urids.map(<f32 as AtomBody>::get_uri());
+//!
+//!             // Reading.
+//!             let tuple = unsafe { self.in_port.get_atom_body(&mut self.urids) }.unwrap();
+//!             for sub_atom in tuple.iter() {
+//!                 match unsafe { sub_atom.get_body::<i32>(&mut self.urids) } {
+//!                     Ok(integer) => {
+//!                         assert_eq!(42, *integer);
+//!                         continue
+//!                     }
+//!                     Err(_) => (),
+//!                 }
+//!                 match unsafe { sub_atom.get_body::<f32>(&mut self.urids) } {
+//!                     Ok(float) => {
+//!                         assert_eq!(17.0, *float);
+//!                         continue
+//!                     }
+//!                     Err(_) => (),
+//!                 }
+//!                 panic!("Unknown property in object!");
+//!             }
+//!         }
+//!     }
+//!
+//!     // Getting a debug URID map.
+//!     let mut debug_map = DebugMap::new();
+//!     let mut urids = unsafe {debug_map.create_cached_map()};
+//!
+//!     // Creating the plugin.
+//!     let mut plugin = Plugin {
+//!         in_port: AtomInputPort::new(),
+//!         out_port: AtomOutputPort::new(),
+//!         urids: urids,
+//!     };
+//!
+//!     // Creating the atom space.
+//!     let mut atom_space = vec![0u8; 256];
+//!     let atom = unsafe { (atom_space.as_mut_ptr() as *mut Atom).as_mut() }.unwrap();
+//!     *(atom.mut_size()) = 256 - 8;
+//!
+//!     // Connecting the ports.
+//!     plugin.in_port.connect_port(atom as &Atom);
+//!     plugin.out_port.connect_port(atom);
+//!
+//!     // Calling `run`.
+//!     plugin.run();
 use crate::atom::{array::*, *};
 use crate::frame::{NestedFrame, WritingFrame, WritingFrameExt};
 use crate::uris;
 use std::ffi::CStr;
 use urid::URID;
 
+/// Nice handle for the time unit.
+///
+/// It is primarily used as a parameter for the
+/// [`Sequence`](type.Sequence.html) initialization method.
+///
+/// This type is not `repr(C)` and can not be directly used to interpret raw data.
 #[derive(Clone, PartialEq, Debug)]
 pub enum TimeUnit {
     Frames,
@@ -11,6 +110,11 @@ pub enum TimeUnit {
 }
 
 impl TimeUnit {
+    /// Try to get a `TimeUnit` value from a urid.
+    ///
+    /// If the given uri is the same as the URID of
+    /// [`uris::BEAT_TIME_URI`](../uris/constant.BEAT_TIME_URI.html), this method will return
+    /// `TimeUnit::Beats`. Otherwise, it will return `Time::Frames`.
     pub fn from_urid(urid: URID, urids: &mut urid::CachedMap) -> TimeUnit {
         if urid == urids.map(unsafe { CStr::from_bytes_with_nul_unchecked(uris::BEAT_TIME_URI) }) {
             TimeUnit::Beats
@@ -19,6 +123,7 @@ impl TimeUnit {
         }
     }
 
+    /// Return the corresponding URID of the time unit.
     pub fn into_urid(&self, urids: &mut urid::CachedMap) -> URID {
         match self {
             TimeUnit::Frames => {
@@ -31,6 +136,11 @@ impl TimeUnit {
     }
 }
 
+/// Nice handle for time stamps.
+///
+/// Time stamps can be given in frames since startup or in beats since startup.
+///
+/// This type is not `repr(C)` and can not be directly used to interpret raw data.
 #[derive(Clone, PartialEq, Debug)]
 pub enum TimeStamp {
     Frames(i64),
@@ -38,6 +148,7 @@ pub enum TimeStamp {
 }
 
 impl TimeStamp {
+    /// Get the time unit of the stamp.
     pub fn get_unit(&self) -> TimeUnit {
         match self {
             TimeStamp::Frames(_) => TimeUnit::Frames,
@@ -48,6 +159,12 @@ impl TimeStamp {
 
 #[repr(C)]
 #[derive(Clone, Copy)]
+/// Raw representation of the time stamp.
+///
+/// The type of this union is depending on the context, in our case the time unit given in the
+/// body header of the sequence.
+///
+/// This type is `repr(C)` and is used to interpret raw data.
 union RawTimeStamp {
     frames: i64,
     beats: f64,
@@ -63,6 +180,11 @@ impl From<TimeStamp> for RawTimeStamp {
 }
 
 #[repr(C)]
+/// The header of a sequence.
+///
+/// It contains the time unit used by the time stamp of every event.
+///
+/// This type is `repr(C)` and is used to interpret raw data.
 pub struct SequenceHeader {
     pub unit: URID,
     pub pad: u32,
@@ -89,6 +211,12 @@ impl ArrayAtomHeader for SequenceHeader {
     }
 }
 
+/// Atom tuple with time stamps for every contained atom.
+///
+/// Sequences are used to express real-time events that should be handled with frame- or
+/// beat-perfect timing, for example midi events.
+///
+/// See the [module documentation](index.html) for more information.
 pub type Sequence = ArrayAtomBody<SequenceHeader, u8>;
 
 impl AtomBody for Sequence {
@@ -136,6 +264,10 @@ impl Sequence {
     }
 }
 
+/// Extension for [`WritingFrame`](../frame/trait.WritingFrame.html) and
+/// [`WritingFrameExt`](../frame/trait.WritingFrameExt.html) for vectors.
+///
+/// See the [module documentation](index.html) for more information.
 pub trait SequenceWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, Sequence> {
     fn push_event<'b, A: AtomBody + ?Sized>(
         &'b mut self,

@@ -6,7 +6,7 @@
 //! When initialized, a literal does not contain any text. Every text has to be appended to the
 //! literal using the [`LiteralWritingFrame`](trait.LiteralWritingFrame.html) trait. Every
 //! writing frame implements this trait via a blanket implementation and the trait is included in
-//! the crate's prelude. You can, therefore, act as if the extended method were normal methods of a
+//! the crate's prelude. You can, therefore, act as if the extended methods were normal methods of a
 //! writing frame.
 //!
 //! You can aquire a literal's data using the [`lang` method](type.Literal.html#method.lang)
@@ -19,7 +19,7 @@
 //!
 //!     use atom::prelude::*;
 //!     use atom::ports::*;
-//!     use atom::atom::*;
+//!     use atom::*;
 //!     use urid::{CachedMap, debug::DebugMap};
 //!     use std::ffi::CStr;
 //!

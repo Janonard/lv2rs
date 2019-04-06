@@ -1,9 +1,9 @@
 extern crate lv2rs_atom as atom;
 extern crate lv2rs_urid as urid;
 
-use atom::atom::*;
 use atom::ports::*;
 use atom::prelude::*;
+use atom::Atom;
 use std::ffi::CStr;
 use urid::debug::DebugMap;
 
@@ -237,7 +237,11 @@ fn test_tuple() {
     let vector = vector.unwrap();
     assert_eq!([0, 2, 4], *vector.as_slice());
 
-    let literal = iter.next().unwrap().get_body::<Literal>(&mut urids).unwrap();
+    let literal = iter
+        .next()
+        .unwrap()
+        .get_body::<Literal>(&mut urids)
+        .unwrap();
     assert_eq!("Hello World!", literal.as_str().unwrap());
 }
 
@@ -292,7 +296,7 @@ fn test_sequence() {
 
     let (time_stamp, integer) = sequence_iter.next().unwrap();
     assert_eq!(TimeStamp::Frames(0), time_stamp);
-    let integer: &i32 =  integer.get_body(&mut urids).unwrap();
+    let integer: &i32 = integer.get_body(&mut urids).unwrap();
     assert_eq!(42, *integer);
 
     let (time_stamp, tuple) = sequence_iter.next().unwrap();
@@ -300,7 +304,7 @@ fn test_sequence() {
     let tuple: &Tuple = tuple.get_body(&mut urids).unwrap();
     {
         let mut iter = tuple.iter();
-        let integer: &i32 = iter.next().unwrap().get_body(&mut urids) .unwrap();
+        let integer: &i32 = iter.next().unwrap().get_body(&mut urids).unwrap();
         assert_eq!(1, *integer);
         let integer: &i32 = iter.next().unwrap().get_body(&mut urids).unwrap();
         assert_eq!(2, *integer);

@@ -6,7 +6,7 @@
 //! When initialized, a vector does not contain any items. These items have to be pushed or appended
 //! to the vector using the [`VectorWritingFrame`](trait.VectorWritingFrame.html) trait. Every
 //! writing frame implements this trait via a blanket implementation and the trait is included in
-//! the crate's prelude. You can, therefore, act as if the extended method were normal methods of a
+//! the crate's prelude. You can, therefore, act as if the extended methods were normal methods of a
 //! writing frame.
 //!
 //! Reading the vector is done using these methods:
@@ -21,7 +21,7 @@
 //!
 //!     use atom::prelude::*;
 //!     use atom::ports::*;
-//!     use atom::atom::*;
+//!     use atom::*;
 //!     use urid::{CachedMap, debug::DebugMap};
 //!     use std::ffi::CStr;
 //!

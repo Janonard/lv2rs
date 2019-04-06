@@ -1,6 +1,6 @@
 use crate::message::*;
-use lv2rs_atom::atom::*;
 use lv2rs_atom::prelude::*;
+use lv2rs_atom::*;
 use lv2rs_urid::CachedMap;
 use std::ffi::CStr;
 use ux::*;

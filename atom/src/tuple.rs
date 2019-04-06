@@ -6,7 +6,7 @@
 //! When initialized, a tuple does not contain any atoms. These have to be pushed to the tuple using
 //! the [`TupleWritingFrame`](trait.TupleWritingFrame.html) trait. Every
 //! writing frame implements this trait via a blanket implementation and the trait is included in
-//! the crate's prelude. You can, therefore, act as if the extended method were normal methods of a
+//! the crate's prelude. You can, therefore, act as if the extended methods were normal methods of a
 //! writing frame.
 //!
 //! Reading atoms is done by iterating through all atoms one by one. Iterators are produced by the
@@ -19,7 +19,7 @@
 //!
 //!     use atom::prelude::*;
 //!     use atom::ports::*;
-//!     use atom::atom::*;
+//!     use atom::*;
 //!     use urid::{CachedMap, debug::DebugMap};
 //!     use std::ffi::CStr;
 //!
