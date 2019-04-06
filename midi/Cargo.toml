@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Janonard <janonard@protonmail.com>"]
 license = "ISC"
 readme = "README.md"
-repository = "https://github.com/Janonard/lv2rs"
+repository = "MIDI message integration for `lv2rs-atom`"
 description = "Rust re-implementation of the LV2 midi library"
 edition = "2018"
 
@@ -12,3 +12,7 @@ edition = "2018"
 lv2rs-atom = { path = "../atom" }
 lv2rs-urid = { path = "../urid" }
 ux = "0.1.3"
+
+[badges]
+travis-ci = { repository = "Janonard/lv2rs", branch = "master" }
+maintenance = { status = "actively-developed" }

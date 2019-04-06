@@ -1,7 +1,9 @@
-# lv2rs-urid: Rust re-implementation of the LV2 urid library.
+# lv2rs-urid: Rust adaptation of the LV2 urid library.
 
-This is a safe and idiomatic re-implementation of the LV2 urid library. It goals are to provide an interface that is compatible with hosts written in C and uses an idiomatic API for plugin implementors.
+This is a safe and idiomatic re-implementation of the LV2 urid library. It provides means to map
+URIs to integer numbers, which improves their speed and memory footprint.
 
-## Links
+## Getting started
 
-Most of the relevant information is found along with the top-level crate [crates-io link](https://crates.io/crates/lv2rs).
+If you want to get started with LV2, you should start with the [root crate](https://crates.io/crates/lv2rs) and check out the
+[book](https://github.com/Janonard/lv2rs-book).

@@ -1,29 +1,28 @@
-//! This is a safe and idiomatic re-implementation of some LV2 libraries, with the goal of being
-//! compatible to existing hosts written in C and providing an easy-to-use interface for plugin
-//! implementors.
+//! This is a idiomatic library empowering you to create LV2-compatible plugins for audio
+//! applications with ease.
 //!
-//! ## Why "re-implemention", not "wrapping" or "binding"?
+//! ## How to use it?
 //!
-//! In most cases, adaptations of C libraries for Rust are split into two crates: One provides a raw
-//! interface to the library and one adapts them for idiomatic use. The reasoning behind this is
-//! that some may want to directly interact with library for extra performance and therefore,
-//! translation and adaptation should be split.
+//! If you want to get started with LV2, you should checkout the
+//! [tutorial](https://github.com/Janonard/lv2rs-book) first. It is a "translation" of the original
+//! [LV2 Book](http://lv2plug.in/book/) by David Robillard, one of the creators of LV2, from C to
+//! Rust.
 //!
-//! Except, in the case of LV2, this does not really make sense: The LV2 library only consists of
-//! type defintions and the only provided functions are inlined utility functions, which make little
-//! to no sense to use in Rust. I therefore translated the struct and function definitions and built
-//! Rust-style utilities around them. This get's closer to a re-implementation of the library than
-//! to a binding and therefore, I named this crate "re-implementation".
+//! The core of the library is formed by the [`core`](https://docs.rs/lv2rs-core) crate, which
+//! contains a trait and a macro that makes the creation of plugins easy. Then, there are the
+//! [`atom`](https://docs.rs/lv2rs-atom) and the [`midi`](https://docs.rs/lv2rs-midi) crates, which
+//! provide general data exchange and MIDI messages.
 //!
-//!## What works, what doesn't?
+//! ## What is supported, what isn't?
 //!
-//!Currently, only the core library is implemented: You can create a plugin which can send and
-//! receive audio data as well as paramaters, given as floating point numbers. That's not much,
-//! but it's the foundation of everything else to come.
+//! Currently 4 out of 22 [official and stable LV2 specifications](http://lv2plug.in/ns/) are
+//! supported, with more being in the works. However, deprecated specifications will never be
+//! supported and some only affect the declarative part of the standard. Therefore, some will be
+//! left out.
 //!
-//!The next libraries I'm going to implement are `URID`, `Atom` and `Midi`, which should cover
-//! almost any use cases of LV2. I would consider this re-implementation done when one can write
-//! every example in the [LV2 Book](http://lv2plug.in/book/) using this library.
+//! The general development goal is to be able to write all examples of the LV2 book in Rust. After
+//! that goal is achieved, this library is considered more or less complete, although further
+//! development may continue afterwards.
 
 pub extern crate lv2rs_atom as atom;
 pub extern crate lv2rs_core as core;
