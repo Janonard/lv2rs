@@ -13,7 +13,6 @@
 //!
 //!     use atom::prelude::*;
 //!     use atom::ports::*;
-//!     use atom::*;
 //!     use urid::{CachedMap, debug::DebugMap};
 //!     use std::ffi::CStr;
 //!

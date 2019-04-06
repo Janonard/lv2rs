@@ -77,6 +77,7 @@ pub mod prelude {
     pub use crate::scalar::ScalarAtomBody;
 
     // Atom bodies.
+    pub use crate::atom::{Atom, AtomBody};
     pub use crate::{
         literal::Literal, object::Object, sequence::Sequence, string::AtomString, tuple::Tuple,
         vector::Vector,

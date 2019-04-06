@@ -3,7 +3,6 @@ extern crate lv2rs_urid as urid;
 
 use atom::ports::*;
 use atom::prelude::*;
-use atom::Atom;
 use std::ffi::CStr;
 use urid::debug::DebugMap;
 
