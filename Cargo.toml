@@ -23,12 +23,6 @@ members = [
     "urid",
 ]
 
-[patch.crates-io]
-lv2rs-atom = { path = "atom" }
-lv2rs-core = { path = "core" }
-lv2rs-midi = { path = "midi" }
-lv2rs-urid = { path = "urid" }
-
 [badges]
 travis-ci = { repository = "Janonard/lv2rs", branch = "master" }
 maintenance = { status = "actively-developed" }
