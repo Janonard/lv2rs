@@ -9,7 +9,7 @@ description = "Rust adaptation of the LV2 urid library"
 edition = "2018"
 
 [dependencies]
-lv2rs-core = { path = "../core" }
+lv2rs-core = "0.3.0"
 
 [badges]
 travis-ci = { repository = "Janonard/lv2rs", branch = "master" }

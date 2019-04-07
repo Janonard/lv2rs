@@ -10,10 +10,10 @@ description = "Rust library for the creation of LV2 plugins"
 edition = "2018"
 
 [dependencies]
-lv2rs-core = { path = "core" }
-lv2rs-urid = { path = "urid" }
-lv2rs-atom = { path = "atom" }
-lv2rs-midi = { path = "midi" }
+lv2rs-core = "0.3.0"
+lv2rs-urid = "0.2.0"
+lv2rs-atom = "0.1.0"
+lv2rs-midi = "0.1.0"
 
 [workspace]
 members = [
