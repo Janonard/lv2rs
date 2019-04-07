@@ -1,4 +1,4 @@
-//! Safer wrappers for raw LV2 audio IO.
+//! Wrappers for raw LV2 audio IO.
 //!
 //! The wrappers provided in this module increase the safety when dealing with the raw IO pointers
 //! provided by a plugin's [`connect_port`](../trait.Plugin.html#tymythod.connect_port) function by
@@ -8,7 +8,7 @@
 //! data they contain. If you only store raw pointers to the ports, you can not tell an
 //! audio port from a parameter port only looking at the type, for example.
 
-/// Safer wrapper for raw audio input lists.
+/// Wrapper for raw audio input lists.
 pub struct AudioInputPort {
     raw: *const f32,
 }
@@ -42,7 +42,7 @@ impl AudioInputPort {
     }
 }
 
-/// Safer wrapper for raw audio output lists.
+/// Wrapper for raw audio output lists.
 pub struct AudioOutputPort {
     raw: *mut f32,
 }
@@ -66,7 +66,7 @@ impl AudioOutputPort {
     ///
     /// This function is unsafe since invalid slices can be created by passing an invalid sample
     /// count. Therefore, only a plugin's `run` function should use this function and must pass
-    /// the sample count it received from the host.
+    /// the sample count it receives from the host.
     pub unsafe fn as_slice(&mut self, n_samples: u32) -> Option<&mut [f32]> {
         if self.raw.is_null() {
             None
@@ -76,7 +76,7 @@ impl AudioOutputPort {
     }
 }
 
-/// Safer wrapper for raw parameter inputs.
+/// Wrapper for raw parameter inputs.
 pub struct ParameterInputPort {
     raw: *const f32,
 }

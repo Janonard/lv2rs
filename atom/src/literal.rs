@@ -148,6 +148,10 @@ impl Literal {
     }
 }
 
+/// Extension for [`WritingFrame`](../frame/trait.WritingFrame.html) and
+/// [`WritingFrameExt`](../frame/trait.WritingFrameExt.html) for vectors.
+///
+/// See the [module documentation](index.html) for more information.
 pub trait LiteralWritingFrame<'a>: WritingFrame<'a> + WritingFrameExt<'a, Literal> {
     /// Append a string to the literal.
     ///

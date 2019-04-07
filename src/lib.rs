@@ -1,10 +1,10 @@
-//! This is a idiomatic library empowering you to create LV2-compatible plugins for audio
+//! This is an idiomatic library empowering you to create LV2-compatible plugins for audio
 //! applications with ease.
 //!
 //! ## How to use it?
 //!
 //! If you want to get started with LV2, you should checkout the
-//! [tutorial](https://github.com/Janonard/lv2rs-book) first. It is a "translation" of the original
+//! [tutorial](https://janonard.github.io/lv2rs-book/) first. It is a "translation" of the original
 //! [LV2 Book](http://lv2plug.in/book/) by David Robillard, one of the creators of LV2, from C to
 //! Rust.
 //!
@@ -21,7 +21,7 @@
 //! left out.
 //!
 //! The general development goal is to be able to write all examples of the LV2 book in Rust. After
-//! that goal is achieved, this library is considered more or less complete, although further
+//! this goal is achieved, this library is considered more or less complete, although further
 //! development may continue afterwards.
 
 pub extern crate lv2rs_atom as atom;

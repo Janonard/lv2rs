@@ -33,7 +33,7 @@ impl core::Plugin for TestPlugin {
         })
     }
 
-    unsafe fn connect_port(&mut self, port: u32, data: *mut ()) {
+    fn connect_port(&mut self, port: u32, data: *mut ()) {
         match port {
             0 => self.audio_in.connect(data as *const f32),
             1 => self.audio_out.connect(data as *mut f32),

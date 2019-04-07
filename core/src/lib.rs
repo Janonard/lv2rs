@@ -9,9 +9,9 @@ pub mod uris;
 pub use feature::{Feature, FeaturesList};
 pub use plugin::*;
 
-/// Create  lv2 export functions.
+/// Create lv2 export functions.
 ///
-/// This macro takes a struct that implements [`Plugin`](trait.Plugin.html) and crates the required
+/// This macro takes a struct that implements [`Plugin`](trait.Plugin.html) and creates the required
 /// functions a plugin needs to export in order to be found and used by plugin hosts.
 ///
 /// In order to properly work, it needs three arguments:
@@ -38,7 +38,7 @@ pub use plugin::*;
 ///             Some(Self {})
 ///         }
 ///
-///         unsafe fn connect_port(&mut self, _port: u32, _data: *mut ()) {}
+///         fn connect_port(&mut self, _port: u32, _data: *mut ()) {}
 ///
 ///         fn run(&mut self, _n_samples: u32) {}
 ///     }

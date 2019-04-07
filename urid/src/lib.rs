@@ -40,7 +40,7 @@
 //!         }
 //!
 //!         // Blank implementations to keep the compiler quiet.
-//!         unsafe fn connect_port(&mut self, _port: u32, _data: *mut ()) {}
+//!         fn connect_port(&mut self, _port: u32, _data: *mut ()) {}
 //!         fn run(&mut self, _n_samples: u32) {}
 //!     }
 extern crate lv2rs_core as core;

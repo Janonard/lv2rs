@@ -7,7 +7,7 @@ use std::os::raw::*;
    Features allow hosts to make additional functionality available to plugins
    without requiring modification to the LV2 API.  Extensions may define new
    features and specify the `uri` and `data` to be used if necessary.
-   Some features, such as lv2:isLive, do not require the host to pass data.
+   Some features, such as `lv2:isLive`, do not require the host to pass data.
 */
 #[repr(C)]
 pub struct Feature {
@@ -33,7 +33,7 @@ pub type FeaturesList = [&'static Feature];
 impl Feature {
     /// Try to get the URI of the feature.
     ///
-    /// None if  the URI is pointing to null.
+    /// None if the URI is pointing to null.
     pub fn uri(&self) -> Option<&CStr> {
         if !self.uri.is_null() {
             Some(unsafe { CStr::from_ptr(self.uri) })

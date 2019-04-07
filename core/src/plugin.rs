@@ -200,9 +200,7 @@ pub struct Descriptor {
 /// necessary functions.
 ///
 /// Almost every plugin function call from the host will be checked and "safed" before these trait
-/// functions may be called. Therefore, most of them are safe, except for one:
-/// [`connect_port`](#tymethod.connect_port). See it's documentations for more information on why it
-/// is unsafe.
+/// functions are called. Therefore, all of them are safe.
 pub trait Plugin {
     /// Create a new instance of the plugin.
     ///
@@ -223,16 +221,11 @@ pub trait Plugin {
     /// Set internal data pointers.
     ///
     /// This function will be called by the host when the location of a port has changed and the
-    /// plugin should update it's internal pointers. This function is highly unsafe, since the type
-    /// of the pointed data is generally unknown. The only thing that gives a clue on the type is
-    /// the id of the port, which should match with the port specified in the plugin's turtle
-    /// document.
+    /// plugin should update it's internal pointers.
     ///
     /// When this function is called, the data pointers may not be valid yet and therefore, you
-    /// shouldn't use them. Also, if the host passes pointers that will never be valid, you cannot
-    /// defend yourselves from undefined behaviour, and you should not, in any case, call this
-    /// function on your own.
-    unsafe fn connect_port(&mut self, port: u32, data: *mut ());
+    /// shouldn't use them.
+    fn connect_port(&mut self, port: u32, data: *mut ());
 
     /// Activate the plugin.
     ///

@@ -1,4 +1,4 @@
-//! Safer wrappers for raw atom IO.
+//! Wrappers for raw atom IO.
 //!
 //! The wrappers provided by this module increase the safety and usability of atom IO.
 use crate::atom::*;
@@ -12,7 +12,8 @@ pub struct AtomOutputPort<A: AtomBody + ?Sized> {
     phantom: PhantomData<A>,
 }
 
-/// Errors that may occur when calling [`AtomOutputPort::write_atom_body`](struct.AtomOuputPort.html#method.write_atom_body)
+/// Errors that may occur when calling
+/// [`AtomOutputPort::write_atom_body`](struct.AtomOuputPort.html#method.write_atom_body)
 #[derive(Debug)]
 pub enum WriteAtomError {
     /// The internal pointer points to zero.
