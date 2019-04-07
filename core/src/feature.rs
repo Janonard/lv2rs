@@ -46,7 +46,7 @@ impl Feature {
     ///
     /// None if the internal feature is pointing to null.
     ///
-    /// This function is unsafe, since we don't know if the data really has type T. It's your
+    /// This function is unsafe, since we don't know if the data really has type `T`. It's your
     /// responsibility to ensure that the data has the correct type.
     pub unsafe fn data<T>(&mut self) -> Option<&mut T> {
         (self.data as *mut T).as_mut()
