@@ -8,4 +8,4 @@ On an abstract level, every atom consist of a header, which contains the URID of
 ## Getting started
 
 If you want to get started with LV2, you should start with the [root crate](https://crates.io/crates/lv2rs) and check out the
-[book](https://github.com/Janonard/lv2rs-book).
+[book](https://janonard.github.io/lv2rs-book/).

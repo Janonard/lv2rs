@@ -5,4 +5,4 @@ This crate introduces new atom types for the use with `lv2rs-atom` which add sup
 ## Getting started
 
 If you want to get started with LV2, you should start with the [root crate](https://crates.io/crates/lv2rs) and check out the
-[book](https://github.com/Janonard/lv2rs-book).
+[book](https://janonard.github.io/lv2rs-book/).
