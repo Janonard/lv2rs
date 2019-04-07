@@ -4,8 +4,8 @@ version = "0.1.0"
 authors = ["Janonard <janonard@protonmail.com>"]
 license = "ISC"
 readme = "README.md"
-repository = "MIDI message integration for `lv2rs-atom`"
-description = "Rust re-implementation of the LV2 midi library"
+repository = "https://github.com/Janonard/lv2rs"
+description = "MIDI message integration for `lv2rs-atom`"
 edition = "2018"
 
 [dependencies]
