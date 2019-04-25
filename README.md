@@ -1,22 +1,20 @@
-# lv2rs: Rust library for the creation of LV2 plugins.
+# lv2rs: Rust library prototype for the creation of LV2 plugins.
 
 [![Build Status](https://travis-ci.com/Janonard/lv2rs.svg?branch=master)](https://travis-ci.com/Janonard/lv2rs)
 
-This is a idiomatic library empowering you to create LV2-compatible plugins for audio applications with ease.
+This is a prototype of an idiomatic library empowering you to create LV2-compatible plugins for audio applications with ease.
 
 ## What works, what doesn't?
 
 Currently 4 out of 22 [official and stable LV2 specifications](http://lv2plug.in/ns/) are
-supported, with more being in the works. These are:
+supported. These are:
 
 * Atom
 * LV2
 * MIDI
 * URID
 
-As you can see, this library is far from complete. The current development goal is to be able to write all examples of the [LV2 book](http://lv2plug.in/book/) in Rust. Some examples are already implemented and are hosted together with a translation of the said book on [GitHub](https://janonard.github.io/lv2rs-book/). After that goal is achieved, this library is considered more or less complete, although further development may continue afterwards.
-
-However, deprecated specifications will never be supported and some only affect the declarative part of the standard. Therefore, some specifications will never be supported. Also, I haven't looked at non-standard specifications yet.
+This is a frozen prototype and therefore, development of this crate will not continue here. Any further development will be picked up soon by the [rust-dsp](https://github.com/rust-dsp) group.
 
 ## Getting started
 

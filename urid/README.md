@@ -1,4 +1,4 @@
-# lv2rs-urid: Rust adaptation of the LV2 urid library.
+# lv2rs-urid: Rust adaptation prototype of the LV2 urid library.
 
 This is a safe and idiomatic re-implementation of the LV2 urid library. It provides means to map
 URIs to integer numbers, which improves their speed and memory footprint.

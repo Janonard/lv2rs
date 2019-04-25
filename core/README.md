@@ -1,4 +1,4 @@
-# lv2rs-core: Rust adaptation of the LV2 core library.
+# lv2rs-core: Rust adaptation prototype of the LV2 core library.
 
 This is a safe and idiomatic to make use of the LV2 core library. It goals are to provide an interface that is compatible with hosts written in C and uses an idiomatic API for plugin implementors.
 

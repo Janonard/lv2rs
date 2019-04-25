@@ -1,12 +1,12 @@
 [package]
 name = "lv2rs"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Janonard <janonard@protonmail.com>"]
 license = "ISC"
 readme = "README.md"
 repository = "https://github.com/Janonard/lv2rs"
 exclude = [".vscode/*", "*.json", ".travis.yml", "CODE_OF_CONDUCT.md"]
-description = "Rust library for the creation of LV2 plugins"
+description = "Rust library prototype for the creation of LV2 plugins"
 edition = "2018"
 
 [dependencies]

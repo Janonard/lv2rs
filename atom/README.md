@@ -1,4 +1,4 @@
-# lv2rs-atom: Rust adaptation of the atom type system for LV2.
+# lv2rs-atom: Rust adaptation prototype of the atom type system for LV2.
 
 The purpose of this crate is to provide safe, idiomatic and easy-to-use means to use the type system introduced by the LV2 atom library. This type system is (relatively) portable and can be used to exchange information of arbitrary type among LV2 plugins.
 

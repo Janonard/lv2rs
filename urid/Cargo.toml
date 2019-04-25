@@ -1,11 +1,11 @@
 [package]
 name = "lv2rs-urid"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Janonard <janonard@protonmail.com>"]
 license = "ISC"
 readme = "README.md"
 repository = "https://github.com/Janonard/lv2rs"
-description = "Rust adaptation of the LV2 urid library"
+description = "Rust adaptation prototype of the LV2 urid library"
 edition = "2018"
 
 [dependencies]

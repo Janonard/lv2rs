@@ -1,11 +1,11 @@
 [package]
 name = "lv2rs-atom"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Janonard <janonard@protonmail.com>"]
 license = "ISC"
 readme = "README.md"
 repository = "https://github.com/Janonard/lv2rs"
-description = "Rust adaptation of the atom type system for LV2"
+description = "Rust adaptation prototype of the atom type system for LV2"
 edition = "2018"
 
 [dependencies]

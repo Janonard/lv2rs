@@ -1,11 +1,11 @@
 [package]
 name = "lv2rs-core"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Janonard <janonard@protonmail.com>"]
 license = "ISC"
 readme = "README.md"
 repository = "https://github.com/Janonard/lv2rs"
-description = "Rust adaptation of the LV2 core library"
+description = "Rust adaptation prototype of the LV2 core library"
 edition = "2018"
 
 [badges]
