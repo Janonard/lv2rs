@@ -1,6 +1,9 @@
 //! A Rust re-implementation of the LV2 URID library.
 //!
 //! This LV2 feature enables you to map URIs to numbers and reverse.
+//! 
+//! This is a frozen prototype and therefore, development of this crate will not continue here. Further
+//! development continues as [rust-lv2](https://github.com/rust-dsp/rust-lv2).
 //!
 //! ## Use
 //!

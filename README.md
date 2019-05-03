@@ -14,7 +14,8 @@ supported. These are:
 * MIDI
 * URID
 
-This is a frozen prototype and therefore, development of this crate will not continue here. Any further development will be picked up soon by the [rust-dsp](https://github.com/rust-dsp) group.
+This is a frozen prototype and therefore, development of this crate will not continue here. Further
+development continues as [rust-lv2](https://github.com/rust-dsp/rust-lv2).
 
 ## Getting started
 

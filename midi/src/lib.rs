@@ -5,6 +5,9 @@
 //! [`SystemExclusiveMessage`](atom/struct.SystemExclusiveMessage.html), as well as means to use
 //! them. Using these structs, one can read from external controlling devices or keyboards or
 //! controll synthesizers or even create a light show!
+//! 
+//! This is a frozen prototype and therefore, development of this crate will not continue here. Further
+//! development continues as [rust-lv2](https://github.com/rust-dsp/rust-lv2).
 //!
 //! This crate depends on the non-standard integer types introduced by the `ux` crate, but you don't
 //! need to depend on it too. The required types are exported too.

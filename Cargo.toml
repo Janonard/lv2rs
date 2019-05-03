@@ -1,6 +1,6 @@
 [package]
 name = "lv2rs"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Janonard <janonard@protonmail.com>"]
 license = "ISC"
 readme = "README.md"
@@ -25,4 +25,4 @@ members = [
 
 [badges]
 travis-ci = { repository = "Janonard/lv2rs", branch = "master" }
-maintenance = { status = "actively-developed" }
+maintenance = { status = "deprecated" }

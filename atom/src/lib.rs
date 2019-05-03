@@ -1,6 +1,9 @@
 //! The purpose of this crate is to provide safe, idiomatic and easy-to-use means to use the type
 //! system introduced by the LV2 atom library. This type system is (relatively) portable and can be
 //! used to exchange information of arbitrary type among LV2 plugins.
+//! 
+//! This is a frozen prototype and therefore, development of this crate will not continue here. Further
+//! development continues as [rust-lv2](https://github.com/rust-dsp/rust-lv2).
 //!
 //! ## What are atoms?
 //!
