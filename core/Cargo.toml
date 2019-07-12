@@ -1,6 +1,6 @@
 [package]
 name = "lv2rs-core"
-version = "0.3.2"
+version = "0.3.3"
 authors = ["Janonard <janonard@protonmail.com>"]
 license = "ISC"
 readme = "README.md"
