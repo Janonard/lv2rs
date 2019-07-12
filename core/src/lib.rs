@@ -23,30 +23,29 @@ pub use plugin::*;
 /// * The struct type that should be used as the Plugin implementation.
 /// * The URI of the plugin. Please note that the URI needs to be a bytes-array and null-terminated,
 /// since the C world has to interact with it.
-///
-/// Example usage:
 ///     
-///     extern crate lv2rs_core as core;
-///     use std::ffi::CStr;
+///       extern crate lv2rs_core as lv2core;
+///       use std::ffi::CStr;
+///       use lv2core::ports::*;
+///     
+///       struct MyPlugin {}
 ///
-///     struct MyPlugin {}
+///       impl lv2core::Plugin for MyPlugin {
+///           fn instantiate(
+///               _descriptor: &lv2core::Descriptor,
+///               _rate: f64,
+///               _bundle_path: &CStr,
+///               _features: Option<&lv2core::FeaturesList>
+///           ) -> Option<Self> {
+///               Some(Self {})
+///           }
 ///
-///     impl core::Plugin for MyPlugin {
-///         fn instantiate(
-///             _descriptor: &core::Descriptor,
-///             _rate: f64,
-///             _bundle_path: &CStr,
-///             _features: Option<&core::FeaturesList>
-///         ) -> Option<Self> {
-///             Some(Self {})
-///         }
+///           fn connect_port(&mut self, _port: u32, _data: *mut ()) {}
 ///
-///         fn connect_port(&mut self, _port: u32, _data: *mut ()) {}
+///           fn run(&mut self, _n_samples: u32) {}
+///       }
 ///
-///         fn run(&mut self, _n_samples: u32) {}
-///     }
-///
-///     core::lv2_main!(core, MyPlugin, b"http://example.org/Dummy\0");
+///       lv2core::lv2_main!(lv2core, MyPlugin, b"http://example.org/Dummy\0");
 ///
 #[macro_export]
 macro_rules! lv2_main {
